@@ -1,0 +1,79 @@
+/* ==========================================================================
+   Evening Reading - 晚读 Design Token & Global Styles (Ant Design Dark Theme)
+   ========================================================================== */
+
+:root {
+  /* Theme Base Color Tokens */
+  --bg-dark-primary: #0f141c;
+  --bg-dark-surface: #171e28;
+  --bg-dark-elevated: #202936;
+  
+  --border-subtle: #2b3544;
+  --border-active: #d4af37;
+
+  --accent-gold: #d4af37;
+  --accent-gold-hover: #e6c250;
+  --accent-blue: #4096ff;
+
+  --text-primary: #f0f4f8;
+  --text-secondary: #8c9ba8;
+  --text-muted: #546373;
+
+  /* Spacing & Radius Tokens */
+  --radius-base: 8px;
+  --radius-lg: 14px;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background-color: var(--bg-dark-primary);
+  color: var(--text-primary);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif;
+  overflow: hidden;
+  user-select: none;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #2c3847;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #3e4e63;
+}
+
+/* Antd Typography Custom Adjustments for Reader */
+.reader-paragraph-text {
+  font-size: 1.05rem;
+  line-height: 1.8;
+  color: var(--text-primary);
+  transition: color 0.2s ease, background-color 0.2s ease;
+}
+
+/* Active Playing Highlight Effect */
+.paragraph-card-active {
+  border-color: var(--accent-gold) !important;
+  background-color: rgba(212, 175, 55, 0.08) !important;
+  box-shadow: 0 0 12px rgba(212, 175, 55, 0.15);
+}
+
+/* Selection Highlight */
+::selection {
+  background: rgba(212, 175, 55, 0.3);
+  color: #ffffff;
+}
