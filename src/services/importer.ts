@@ -1,4 +1,4 @@
-import { Book, ParagraphBlock } from '../types/reader';
+import { Book, ParagraphBlock, Chapter } from '../types/reader';
 
 /**
  * 随机生成简单唯一 ID
@@ -9,32 +9,44 @@ function generateId(): string {
 }
 
 /**
- * 将文本内容解析并切分为段落块
+ * 将文本内容解析并切分为段落块，同时提取小说章节目录
  * @param {string} text 原始文本内容
  * @param {string} bookId 关联的书籍 ID
- * @returns {ParagraphBlock[]} 拆分后的段落块列表
+ * @returns {{ blocks: ParagraphBlock[], chapters: Chapter[] }}
  */
-export function parseTextToBlocks(text: string, bookId: string): ParagraphBlock[] {
-  // 兼容不同操作系统的换行符 (Windows: \r\n, Linux: \n, 老 Mac: \r)
+export function parseTextToBlocks(text: string, bookId: string): { blocks: ParagraphBlock[], chapters: Chapter[] } {
   const rawLines = text.split(/\r\n|\n|\r/);
   const blocks: ParagraphBlock[] = [];
+  const chapters: Chapter[] = [];
   let blockIndex = 0;
+
+  // 大陆网文通用章节格式匹配，需小于 50 字符防止误伤普通对话
+  const chapterRegex = /^第\s*[一二三四五六七八九十百千万0-9]+\s*[章节回卷]/;
 
   for (const rawLine of rawLines) {
     const trimmed = rawLine.trim();
     if (trimmed.length > 0) {
+      const blockId = `${bookId}_blk_${blockIndex}_${generateId().substring(0, 6)}`;
       blocks.push({
-        id: `${bookId}_blk_${blockIndex}_${generateId().substring(0, 6)}`,
+        id: blockId,
         bookId,
         index: blockIndex,
         content: trimmed,
         version: 1,
       });
+
+      if (trimmed.length < 50 && chapterRegex.test(trimmed)) {
+        chapters.push({
+          title: trimmed,
+          blockId: blockId
+        });
+      }
+
       blockIndex++;
     }
   }
 
-  return blocks;
+  return { blocks, chapters };
 }
 
 /**
@@ -72,13 +84,14 @@ export async function importTxtFile(file: File): Promise<{ book: Book; blocks: P
 
   const bookId = generateId();
 
-  const blocks = parseTextToBlocks(text, bookId);
+  const { blocks, chapters } = parseTextToBlocks(text, bookId);
 
   const book: Book = {
     id: bookId,
     title: file.name.replace(/\.txt$/i, ''),
     fileName: file.name,
     totalBlocks: blocks.length,
+    chapters,
     createdAt: Date.now(),
     updatedAt: Date.now(),
   };
@@ -104,13 +117,14 @@ export function createDemoBook(): { book: Book; blocks: ParagraphBlock[] } {
 
 夜深人静，唯有书香与良声相伴。祝您享受美好的晚读时光！`;
 
-  const blocks = parseTextToBlocks(demoText, bookId);
+  const { blocks, chapters } = parseTextToBlocks(demoText, bookId);
 
   const book: Book = {
     id: bookId,
     title: '晚读功能使用指南',
     fileName: 'guide.txt',
     totalBlocks: blocks.length,
+    chapters,
     createdAt: Date.now(),
     updatedAt: Date.now(),
   };

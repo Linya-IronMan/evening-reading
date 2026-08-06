@@ -2,12 +2,18 @@
  * 晚读 (Evening Reading) 领域模型定义
  */
 
+export interface Chapter {
+  title: string;
+  blockId: string;
+}
+
 // 1. 书籍元信息
 export interface Book {
   id: string;             // 唯一标志符 (UUID/Hash)
   title: string;          // 书名/文件名
   fileName: string;       // 原始文件名
   totalBlocks: number;    // 总段落块数量
+  chapters?: Chapter[];   // 小说章节大纲
   createdAt: number;      // 创建/导入时间戳
   updatedAt: number;      // 最后阅读/修改时间戳
 }
