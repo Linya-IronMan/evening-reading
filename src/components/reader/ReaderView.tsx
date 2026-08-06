@@ -17,7 +17,7 @@ interface ReaderViewProps {
   onCreateComment: (blockId: string, quoteText: string, commentContent: string) => void;
 }
 
-export type ActiveOperatingState = { blockId: string; mode: 'editing' | 'commenting' } | null;
+export type ActiveOperatingState = { blockId: string; mode: 'editing' | 'commenting' | 'selected' } | null;
 
 /**
  * 主阅读视窗组件
@@ -80,7 +80,10 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
   }
 
   return (
-    <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+    <div 
+      style={{ height: '100%', display: 'flex', flexDirection: 'column' }}
+      onClick={() => setActiveOperating(null)}
+    >
       {/* 顶部文章标题区 */}
       <div
         style={{
@@ -112,13 +115,14 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
           ref={virtuosoRef}
           style={{ height: '100%' }}
           data={blocks}
-          itemContent={(index, block) => (
+          context={{ activeOperating, currentPlayingBlockId, commentCountMap }}
+          itemContent={(index, block, context) => (
             <div style={{ paddingLeft: '2rem', paddingRight: '0', paddingTop: index === 0 ? '1.5rem' : 0 }}>
               <ParagraphItem
                 block={block}
-                isPlaying={block.id === currentPlayingBlockId}
-                commentCount={commentCountMap.get(block.id) || 0}
-                activeOperating={activeOperating}
+                isPlaying={block.id === context.currentPlayingBlockId}
+                commentCount={context.commentCountMap.get(block.id) || 0}
+                activeOperating={context.activeOperating}
                 onActiveOperatingChange={setActiveOperating}
                 onPlay={onPlayBlock}
                 onUpdateContent={onUpdateBlockContent}

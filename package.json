@@ -9,6 +9,7 @@
     "lint": "tsc --noEmit",
     "preview": "vite preview",
     "tauri": "tauri",
+    "test:tts": "cargo run --manifest-path src-tauri/Cargo.toml --bin test_tts_voices",
     "release": "commit-and-tag-version"
   },
   "dependencies": {

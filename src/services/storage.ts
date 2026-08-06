@@ -1,103 +1,71 @@
 import { Book, ParagraphBlock, ReadingProgress, Comment } from '../types/reader';
-
-const STORAGE_KEYS = {
-  BOOKS: 'evening_reading_books',
-  PROGRESS_PREFIX: 'evening_reading_progress_',
-  COMMENTS_PREFIX: 'evening_reading_comments_',
-};
-
-const DB_NAME = 'EveningReadingDB';
-const STORE_NAME = 'blocks_store';
-
-function getDB(): Promise<IDBDatabase> {
-  return new Promise((resolve, reject) => {
-    const request = indexedDB.open(DB_NAME, 1);
-    request.onupgradeneeded = () => {
-      if (!request.result.objectStoreNames.contains(STORE_NAME)) {
-        request.result.createObjectStore(STORE_NAME);
-      }
-    };
-    request.onsuccess = () => resolve(request.result);
-    request.onerror = () => reject(request.error);
-  });
-}
+import { fetchWithRetry } from '../utils/apiClient';
 
 /**
  * 获取所有本地书籍
- * @returns {Book[]} 书籍列表
  */
-export function getStoredBooks(): Book[] {
+export async function getStoredBooks(): Promise<Book[]> {
   try {
-    const raw = localStorage.getItem(STORAGE_KEYS.BOOKS);
-    return raw ? JSON.parse(raw) : [];
+    const res = await fetchWithRetry('/api/books');
+    return await res.json();
   } catch (err) {
-    console.error('Failed to get books from localStorage:', err);
+    console.error('Failed to get books from backend:', err);
     return [];
   }
 }
 
 /**
- * 保存书籍列表
- * @param {Book[]} books 书籍数组
+ * 保存书籍列表 (Wait, backend API expects importing a single book)
+ * Actually, we use POST /api/books for importing a new book
  */
-export function saveStoredBooks(books: Book[]): void {
+export async function importBookToBackend(book: Book, blocks: ParagraphBlock[]): Promise<void> {
   try {
-    localStorage.setItem(STORAGE_KEYS.BOOKS, JSON.stringify(books));
+    await fetchWithRetry('/api/books', {
+      method: 'POST',
+      body: JSON.stringify({ book, blocks })
+    });
   } catch (err) {
-    console.error('Failed to save books to localStorage:', err);
+    console.error('Failed to import book:', err);
+    throw err;
   }
 }
 
 /**
- * 获取特定书籍的段落块 (IndexedDB)
- * @param {string} bookId 书籍 ID
- * @returns {Promise<ParagraphBlock[]>} 段落块数组
+ * 获取特定书籍的段落块
  */
 export async function getStoredBlocks(bookId: string): Promise<ParagraphBlock[]> {
   try {
-    const db = await getDB();
-    return new Promise((resolve, reject) => {
-      const tx = db.transaction(STORE_NAME, 'readonly');
-      const store = tx.objectStore(STORE_NAME);
-      const req = store.get(bookId);
-      req.onsuccess = () => resolve(req.result || []);
-      req.onerror = () => reject(req.error);
-    });
+    const res = await fetchWithRetry(`/api/books/${bookId}/blocks`);
+    return await res.json();
   } catch (err) {
-    console.error(`Failed to get blocks for book ${bookId} from IDB:`, err);
+    console.error(`Failed to get blocks for book ${bookId}:`, err);
     return [];
   }
 }
 
 /**
- * 保存特定书籍的段落块 (IndexedDB，突破 localStorage 容量限制)
- * @param {string} bookId 书籍 ID
- * @param {ParagraphBlock[]} blocks 段落块数组
+ * 保存特定书籍的段落块
  */
 export async function saveStoredBlocks(bookId: string, blocks: ParagraphBlock[]): Promise<void> {
   try {
-    const db = await getDB();
-    return new Promise((resolve, reject) => {
-      const tx = db.transaction(STORE_NAME, 'readwrite');
-      const store = tx.objectStore(STORE_NAME);
-      const req = store.put(blocks, bookId);
-      req.onsuccess = () => resolve();
-      req.onerror = () => reject(req.error);
+    await fetchWithRetry(`/api/books/${bookId}/blocks`, {
+      method: 'PUT',
+      body: JSON.stringify(blocks)
     });
   } catch (err) {
-    console.error(`Failed to save blocks for book ${bookId} to IDB:`, err);
+    console.error(`Failed to save blocks for book ${bookId}:`, err);
+    throw err;
   }
 }
 
 /**
  * 获取特定书籍的朗读进度
- * @param {string} bookId 书籍 ID
- * @returns {ReadingProgress | null} 进度记录
  */
-export function getStoredProgress(bookId: string): ReadingProgress | null {
+export async function getStoredProgress(bookId: string): Promise<ReadingProgress | null> {
   try {
-    const raw = localStorage.getItem(STORAGE_KEYS.PROGRESS_PREFIX + bookId);
-    return raw ? JSON.parse(raw) : null;
+    const res = await fetchWithRetry(`/api/books/${bookId}/progress`);
+    if (res.status === 404) return null;
+    return await res.json();
   } catch (err) {
     console.error(`Failed to get progress for book ${bookId}:`, err);
     return null;
@@ -106,11 +74,13 @@ export function getStoredProgress(bookId: string): ReadingProgress | null {
 
 /**
  * 保存朗读进度
- * @param {ReadingProgress} progress 进度记录
  */
-export function saveStoredProgress(progress: ReadingProgress): void {
+export async function saveStoredProgress(progress: ReadingProgress): Promise<void> {
   try {
-    localStorage.setItem(STORAGE_KEYS.PROGRESS_PREFIX + progress.bookId, JSON.stringify(progress));
+    await fetchWithRetry(`/api/books/${progress.bookId}/progress`, {
+      method: 'PUT',
+      body: JSON.stringify(progress)
+    });
   } catch (err) {
     console.error('Failed to save progress:', err);
   }
@@ -118,13 +88,11 @@ export function saveStoredProgress(progress: ReadingProgress): void {
 
 /**
  * 获取特定书籍的评论列表
- * @param {string} bookId 书籍 ID
- * @returns {Comment[]} 评论数组
  */
-export function getStoredComments(bookId: string): Comment[] {
+export async function getStoredComments(bookId: string): Promise<Comment[]> {
   try {
-    const raw = localStorage.getItem(STORAGE_KEYS.COMMENTS_PREFIX + bookId);
-    return raw ? JSON.parse(raw) : [];
+    const res = await fetchWithRetry(`/api/books/${bookId}/comments`);
+    return await res.json();
   } catch (err) {
     console.error(`Failed to get comments for book ${bookId}:`, err);
     return [];
@@ -132,35 +100,44 @@ export function getStoredComments(bookId: string): Comment[] {
 }
 
 /**
- * 保存评论列表
- * @param {string} bookId 书籍 ID
- * @param {Comment[]} comments 评论数组
+ * 创建单条评论
  */
-export function saveStoredComments(bookId: string, comments: Comment[]): void {
+export async function createStoredComment(bookId: string, comment: Comment): Promise<void> {
   try {
-    localStorage.setItem(STORAGE_KEYS.COMMENTS_PREFIX + bookId, JSON.stringify(comments));
+    await fetchWithRetry(`/api/books/${bookId}/comments`, {
+      method: 'POST',
+      body: JSON.stringify(comment)
+    });
   } catch (err) {
-    console.error(`Failed to save comments for book ${bookId}:`, err);
+    console.error(`Failed to save comment for book ${bookId}:`, err);
+    throw err;
+  }
+}
+
+/**
+ * 删除评论
+ */
+export async function deleteStoredComment(bookId: string, commentId: string): Promise<void> {
+  try {
+    await fetchWithRetry(`/api/books/${bookId}/comments/${commentId}`, {
+      method: 'DELETE'
+    });
+  } catch (err) {
+    console.error(`Failed to delete comment:`, err);
+    throw err;
   }
 }
 
 /**
  * 删除书籍及其所有关联数据
- * @param {string} bookId 书籍 ID
  */
 export async function removeBookAndData(bookId: string): Promise<void> {
   try {
-    const books = getStoredBooks().filter((b) => b.id !== bookId);
-    saveStoredBooks(books);
-
-    localStorage.removeItem(STORAGE_KEYS.PROGRESS_PREFIX + bookId);
-    localStorage.removeItem(STORAGE_KEYS.COMMENTS_PREFIX + bookId);
-    
-    // Remove from IDB
-    const db = await getDB();
-    const tx = db.transaction(STORE_NAME, 'readwrite');
-    tx.objectStore(STORE_NAME).delete(bookId);
+    await fetchWithRetry(`/api/books/${bookId}`, {
+      method: 'DELETE'
+    });
   } catch (err) {
     console.error(`Failed to remove book ${bookId}:`, err);
+    throw err;
   }
 }

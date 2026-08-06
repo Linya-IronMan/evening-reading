@@ -3,6 +3,7 @@ name = "evening_reading_lib"
 version = "0.1.0"
 description = "Evening Reading Tauri Application"
 edition = "2021"
+default-run = "evening_reading_lib"
 
 [lib]
 name = "evening_reading_lib"
@@ -25,3 +26,8 @@ hex = "0.4.3"
 uuid = { version = "1.12.1", features = ["v4"] }
 chrono = "0.4.39"
 dashmap = "6.1.0"
+axum = { version = "0.7", features = ["ws"] }
+mime_guess = "2.0"
+tower-http = { version = "0.5", features = ["fs", "cors", "trace"] }
+rust-embed = { version = "8.0", features = ["include-exclude"] }
+rusqlite = { version = "0.32", features = ["bundled"] }

@@ -60,19 +60,11 @@ export const EDGE_VOICES: VoiceOption[] = [
   // —— 大陆普通话 (女声) ——
   { id: 'zh-CN-XiaoxiaoNeural', name: '晓晓 (温柔亲切)', gender: 'female' },
   { id: 'zh-CN-XiaoyiNeural', name: '晓伊 (活泼可爱)', gender: 'female' },
-  { id: 'zh-CN-XiaomoNeural', name: '晓墨 (知性沉稳)', gender: 'female' },
-  { id: 'zh-CN-XiaochenNeural', name: '晓辰 (自然清晰)', gender: 'female' },
-  { id: 'zh-CN-XiaohanNeural', name: '晓涵 (温暖甜美)', gender: 'female' },
-  { id: 'zh-CN-XiaoruiNeural', name: '晓睿 (正式播音)', gender: 'female' },
-  { id: 'zh-CN-XiaoyouNeural', name: '晓悠 (童声女孩)', gender: 'female' },
   
   // —— 大陆普通话 (男声) ——
-  { id: 'zh-CN-YunxiNeural', name: '云希 (阳光阳光)', gender: 'male' },
+  { id: 'zh-CN-YunxiNeural', name: '云希 (阳光活泼)', gender: 'male' },
   { id: 'zh-CN-YunyangNeural', name: '云扬 (新闻播音)', gender: 'male' },
   { id: 'zh-CN-YunjianNeural', name: '云健 (影视旁白)', gender: 'male' },
-  { id: 'zh-CN-YunzeNeural', name: '云泽 (成熟稳重)', gender: 'male' },
-  { id: 'zh-CN-YunfengNeural', name: '云枫 (朝气蓬勃)', gender: 'male' },
-  { id: 'zh-CN-YunhaoNeural', name: '云皓 (清朗男声)', gender: 'male' },
   
   // —— 地方特色与方言 ——
   { id: 'zh-CN-liaoning-XiaobeiNeural', name: '晓北 (东北话)', gender: 'female' },

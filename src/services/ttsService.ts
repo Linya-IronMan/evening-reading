@@ -1,5 +1,5 @@
-import { invoke } from '@tauri-apps/api/core';
 import { EDGE_VOICES } from '../types/reader';
+import { fetchWithRetry } from '../utils/apiClient';
 
 export interface TTSEventListeners {
   onLoadStart?: (blockId: string) => void;
@@ -48,9 +48,18 @@ class TTSService {
   public setVoice(voiceId: string): void {
     if (this.voiceId !== voiceId) {
       this.voiceId = voiceId;
-      // 切换音色时必须清空旧音色的缓存池，否则预加载的或者已缓存的都是旧音色
-      this.cachePool.forEach((_, key) => this.evictCache(key));
-      this.cachePool.clear();
+      
+      const wasPlaying = this.isPlaying;
+      const currentId = this.currentBlockId;
+      
+      this.playToken++;
+      // 切换音色时必须清空旧音色的缓存池，同时停止当前播放并撤销 Blob 资源
+      this.stopInternal(true);
+
+      // 如果之前正在播放，则用新音色重新播放当前段落
+      if (wasPlaying && currentId) {
+        this.speakBlock(currentId);
+      }
     }
   }
 
@@ -197,31 +206,24 @@ class TTSService {
 
   private async fetchEdgeTTSAudioBlob(text: string, voice: string, signal: AbortSignal): Promise<Blob> {
     const requestId = Math.random().toString(36).substring(2, 18);
-    console.log(`[TTS Frontend] Calling fetch_edge_tts with requestId: ${requestId}, voice: ${voice}, textLength: ${text.length}`);
-
-    const handleAbort = () => {
-      console.log(`[TTS Frontend] Abort requested for requestId: ${requestId}. Invoking cancel_edge_tts...`);
-      invoke('cancel_edge_tts', { requestId }).catch(e => console.error('[TTS Frontend] Cancel Error:', e));
-    };
-
-    if (signal.aborted) {
-      handleAbort();
-      throw new Error('AbortError: TTS fetch cancelled');
-    } else {
-      signal.addEventListener('abort', handleAbort);
-    }
+    console.log(`[TTS Frontend] Calling /api/tts with requestId: ${requestId}, voice: ${voice}, textLength: ${text.length}`);
 
     try {
-      const audioBytes = await invoke<number[]>('fetch_edge_tts', {
-        requestId,
-        text,
-        voice
-      });
-      console.log(`[TTS Frontend] Successfully received audioBytes for requestId: ${requestId}, length: ${audioBytes.length}`);
-      const uint8Array = new Uint8Array(audioBytes);
-      return new Blob([uint8Array], { type: 'audio/mp3' });
-    } finally {
-      signal.removeEventListener('abort', handleAbort);
+      const response = await fetchWithRetry('/api/tts', {
+        method: 'POST',
+        signal,
+        body: JSON.stringify({ text, voice }),
+      }, 0); // No retries for TTS to avoid lag on fast forward
+
+      const blob = await response.blob();
+      console.log(`[TTS Frontend] Successfully received audio Blob for requestId: ${requestId}, size: ${blob.size}`);
+      return blob;
+    } catch (err: any) {
+      if (err.name === 'AbortError') {
+        console.log(`[TTS Frontend] AbortError for requestId: ${requestId}`);
+        throw new Error('AbortError: TTS fetch cancelled');
+      }
+      throw err;
     }
   }
 
@@ -244,6 +246,18 @@ class TTSService {
       this.isPlaying = true;
       this.isPaused = false;
       this.listeners.onStart?.(blockId);
+      
+      // Safety timeout for macOS Web Speech API bug (where onend never fires)
+      // Estimate duration based on text length (approx 4 chars per second at 1.0x speed)
+      const estimatedDurationMs = (text.length / 4) * 1000 / this.rate;
+      const maxWaitTime = Math.max(estimatedDurationMs + 3000, 5000);
+      
+      setTimeout(() => {
+        if (this.playToken === currentToken && this.isPlaying && this.currentBlockId === blockId) {
+          console.warn('[TTS Frontend] Web Speech API timeout, manually advancing queue.');
+          utterance.onend?.(new Event('end') as any);
+        }
+      }, maxWaitTime);
     };
 
     utterance.onend = () => {
@@ -347,6 +361,7 @@ class TTSService {
       }
       console.warn('[TTS Frontend] Edge-TTS synthesis failed/offline, switching to Web Speech fallback:', err);
       if (this.playToken === currentToken) {
+        this.listeners.onError?.(blockId, `在线语音生成失败，已切换至离线语音`);
         this.speakFallback(blockId, contentToSpeak!, currentToken);
       }
     }

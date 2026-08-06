@@ -32,6 +32,7 @@ export const ParagraphItem: React.FC<ParagraphItemProps> = ({
   onCreateComment,
 }) => {
   const isEditing = activeOperating?.blockId === block.id && activeOperating?.mode === 'editing';
+  const isSelected = activeOperating?.blockId === block.id && activeOperating?.mode === 'selected';
   const isOperatingOtherBlock = activeOperating !== null && activeOperating.blockId !== block.id;
 
   const [editValue, setEditValue] = useState<string>(block.content);
@@ -175,13 +176,23 @@ export const ParagraphItem: React.FC<ParagraphItemProps> = ({
     >
       <div
         id={`block-${block.id}`}
-        className={`paragraph-container ${isPlaying ? 'paragraph-active' : ''}`}
+        className={`paragraph-container ${isPlaying ? 'paragraph-active' : ''} ${isSelected ? 'paragraph-selected' : ''}`}
         style={{
           opacity: isOperatingOtherBlock ? 0.5 : 1,
-          pointerEvents: isOperatingOtherBlock ? 'none' : 'auto',
+          cursor: isOperatingOtherBlock ? 'default' : 'pointer',
         }}
         onMouseUp={handleMouseUp}
-        onClick={(e) => e.stopPropagation()}
+        onClick={(e) => {
+          e.stopPropagation();
+          if (!isEditing && !isOperatingOtherBlock) {
+            // Toggle selection
+            if (isSelected) {
+              onActiveOperatingChange(null);
+            } else {
+              onActiveOperatingChange({ blockId: block.id, mode: 'selected' });
+            }
+          }
+        }}
       >
         <div className="paragraph-actions">
           <Tooltip title="从该段开始朗读" placement="top">
@@ -189,7 +200,10 @@ export const ParagraphItem: React.FC<ParagraphItemProps> = ({
               type="text"
               size="small"
               icon={<PlayCircleOutlined style={{ color: isPlaying ? '#d4af37' : '#8c9ba8' }} />}
-              onClick={() => onPlay(block.id)}
+              onClick={(e) => {
+                e.stopPropagation();
+                onPlay(block.id);
+              }}
             />
           </Tooltip>
           {!isEditing && (
@@ -199,7 +213,10 @@ export const ParagraphItem: React.FC<ParagraphItemProps> = ({
                   type="text"
                   size="small"
                   icon={<FormOutlined style={{ color: '#8c9ba8' }} />}
-                  onClick={handleParagraphComment}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleParagraphComment();
+                  }}
                 />
               </Tooltip>
               <Tooltip title="编辑此段落" placement="top">
@@ -207,7 +224,8 @@ export const ParagraphItem: React.FC<ParagraphItemProps> = ({
                   type="text"
                   size="small"
                   icon={<EditOutlined style={{ color: '#8c9ba8' }} />}
-                  onClick={() => {
+                  onClick={(e) => {
+                    e.stopPropagation();
                     setEditValue(block.content);
                     onActiveOperatingChange({ blockId: block.id, mode: 'editing' });
                   }}

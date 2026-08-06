@@ -4,11 +4,12 @@ import { Book, ParagraphBlock, Comment, ReadingProgress, EDGE_VOICES } from './t
 import { createDemoBook } from './services/importer';
 import {
   getStoredBooks,
-  saveStoredBooks,
+  importBookToBackend,
   getStoredBlocks,
   saveStoredBlocks,
   getStoredComments,
-  saveStoredComments,
+  createStoredComment,
+  deleteStoredComment,
   getStoredProgress,
   saveStoredProgress,
   removeBookAndData,
@@ -38,32 +39,22 @@ export default function App(): React.ReactElement {
   const [playbackSpeed, setPlaybackSpeed] = useState<number>(1.0);
   const [voiceId, setVoiceId] = useState<string>(EDGE_VOICES[0].id);
 
-  // 避免在顺序切段回调中访问到旧闭包状态的 Ref 存储
-  const blocksRef = useRef<ParagraphBlock[]>(blocks);
-  blocksRef.current = blocks;
-
-  const currentPlayingBlockIdRef = useRef<string | null>(currentPlayingBlockId);
-  currentPlayingBlockIdRef.current = currentPlayingBlockId;
-
   // 1. 初始化数据加载
   useEffect(() => {
-    let storedBooks = getStoredBooks();
-
-    if (storedBooks.length === 0) {
-      const demo = createDemoBook();
-      storedBooks = [demo.book];
-      saveStoredBooks(storedBooks);
-      saveStoredBlocks(demo.book.id, demo.blocks).then(() => {
-        setBooks(storedBooks);
+    getStoredBooks().then((storedBooks) => {
+      if (storedBooks.length === 0) {
+        const demo = createDemoBook();
+        importBookToBackend(demo.book, demo.blocks).then(() => {
+          setBooks([demo.book]);
+          setActiveBookId(demo.book.id);
+        });
+        return;
+      }
+      setBooks(storedBooks);
+      if (storedBooks.length > 0) {
         setActiveBookId(storedBooks[0].id);
-      });
-      return;
-    }
-
-    setBooks(storedBooks);
-    if (storedBooks.length > 0) {
-      setActiveBookId(storedBooks[0].id);
-    }
+      }
+    });
   }, []);
 
   // 2. 切换当前书籍时，加载对应段落、进度与评论
@@ -82,11 +73,13 @@ export default function App(): React.ReactElement {
       ttsService.setPlaylist(b); // 向下同步播放列表
     });
 
-    const c = getStoredComments(activeBookId);
-    setComments(c);
+    getStoredComments(activeBookId).then(c => {
+      if (isCancelled) return;
+      setComments(c);
+    });
 
-    const p = getStoredProgress(activeBookId);
-    if (p) {
+    getStoredProgress(activeBookId).then(p => {
+      if (isCancelled || !p) return;
       setPlaybackSpeed(p.playbackSpeed || 1.0);
       ttsService.setRate(p.playbackSpeed || 1.0);
       if (p.voiceId) {
@@ -94,7 +87,7 @@ export default function App(): React.ReactElement {
         ttsService.setVoice(p.voiceId);
       }
       setCurrentPlayingBlockId(p.currentBlockId);
-    }
+    });
     
     return () => {
       isCancelled = true;
@@ -128,7 +121,6 @@ export default function App(): React.ReactElement {
         setIsAudioLoading(false);
         setIsPlaying(false);
         setIsPaused(false);
-        // 原有的自动跳下个段落的逻辑已经移到 TTSService 内部 (利用无缝预加载队列)
       },
       onError: (_blockId, errorMsg) => {
         setIsAudioLoading(false);
@@ -139,6 +131,37 @@ export default function App(): React.ReactElement {
     });
   }, [activeBookId]);
 
+  // WebSocket 实时同步
+  useEffect(() => {
+    const wsUrl = window.location.port === '1421'
+      ? `ws://${window.location.host}/api/ws`
+      : 'ws://127.0.0.1:1421/api/ws';
+    
+    const ws = new WebSocket(wsUrl);
+    ws.onmessage = (event) => {
+      try {
+        if (!activeBookId) return;
+        const data = JSON.parse(event.data);
+        if (data.book_id === activeBookId) {
+          if (data.event_type === 'SYNC_PROGRESS') {
+            getStoredProgress(activeBookId).then(p => {
+              if (p && p.currentBlockId !== currentPlayingBlockId) {
+                setCurrentPlayingBlockId(p.currentBlockId);
+              }
+            });
+          } else if (data.event_type === 'SYNC_BLOCKS') {
+            getStoredBlocks(activeBookId).then(setBlocks);
+          } else if (data.event_type === 'SYNC_COMMENTS') {
+            getStoredComments(activeBookId).then(setComments);
+          }
+        }
+      } catch (e) {
+        console.error("WS Parse error", e);
+      }
+    };
+    return () => ws.close();
+  }, [activeBookId, currentPlayingBlockId]);
+
   // --- 业务交互句柄 ---
 
   const handleSelectBook = (bookId: string) => {
@@ -146,12 +169,15 @@ export default function App(): React.ReactElement {
   };
 
   const handleImportBook = async (newBook: Book, newBlocks: ParagraphBlock[]) => {
-    const updatedBooks = [newBook, ...books];
-    setBooks(updatedBooks);
-    saveStoredBooks(updatedBooks);
-    await saveStoredBlocks(newBook.id, newBlocks);
-    setActiveBookId(newBook.id);
-    message.success(`成功导入《${newBook.title}》！`);
+    try {
+      await importBookToBackend(newBook, newBlocks);
+      const updatedBooks = [newBook, ...books];
+      setBooks(updatedBooks);
+      setActiveBookId(newBook.id);
+      message.success(`成功导入《${newBook.title}》！`);
+    } catch (e) {
+      message.error("导入失败");
+    }
   };
 
   const handleDeleteBook = async (bookId: string) => {
@@ -212,14 +238,10 @@ export default function App(): React.ReactElement {
     ttsService.setRate(rate);
   };
 
-  /**
-   * 切换音色选单
-   */
   const handleChangeVoice = (newVoiceId: string) => {
     setVoiceId(newVoiceId);
     ttsService.setVoice(newVoiceId);
 
-    // 如果正在朗读中或正在缓冲中，使用新音色从当前段落重新播放
     if (currentPlayingBlockId && (isPlaying || isAudioLoading)) {
       handlePlayBlock(currentPlayingBlockId);
     }
@@ -248,7 +270,6 @@ export default function App(): React.ReactElement {
         ttsService.setPlaylist(updatedBlocks);
       }
 
-      // 让 TTS 使该段落缓存失效
       ttsService.updateBlock(blockId, newContent);
 
       if (currentPlayingBlockId === blockId && isPlaying) {
@@ -257,12 +278,11 @@ export default function App(): React.ReactElement {
 
       message.success('段落内容已保存');
     } catch (err) {
-      // 错误传播，不吞噬原始错误
       message.error(`保存段落失败: ${err instanceof Error ? err.message : String(err)}`);
     }
   };
 
-  const handleCreateComment = (blockId: string, quoteText: string, commentContent: string) => {
+  const handleCreateComment = async (blockId: string, quoteText: string, commentContent: string) => {
     if (!activeBookId) return;
 
     try {
@@ -274,29 +294,28 @@ export default function App(): React.ReactElement {
         endOffset: quoteText.length,
         quoteText,
         content: commentContent,
-        createdAt: Date.now(), // 真实时间戳，零伪造
+        createdAt: Date.now(),
       };
 
-      const updatedComments = [newComment, ...comments];
-      saveStoredComments(activeBookId, updatedComments);
-      
-      // 强制回读契约 (Write-to-Read Back Contract)
-      const readBackComments = getStoredComments(activeBookId);
+      await createStoredComment(activeBookId, newComment);
+      const readBackComments = await getStoredComments(activeBookId);
       setComments(readBackComments);
-      
       message.success('已发布笔记！');
     } catch (err) {
-      // 错误传播
       message.error(`发布笔记失败: ${err instanceof Error ? err.message : String(err)}`);
     }
   };
 
-  const handleDeleteComment = (commentId: string) => {
+  const handleDeleteComment = async (commentId: string) => {
     if (!activeBookId) return;
-    const updated = comments.filter((c) => c.id !== commentId);
-    setComments(updated);
-    saveStoredComments(activeBookId, updated);
-    message.info('评论已删除');
+    try {
+      await deleteStoredComment(activeBookId, commentId);
+      const updated = comments.filter((c) => c.id !== commentId);
+      setComments(updated);
+      message.info('评论已删除');
+    } catch (e) {
+      message.error('删除失败');
+    }
   };
 
   const handleScrollToBlock = (blockId: string) => {
@@ -324,7 +343,12 @@ export default function App(): React.ReactElement {
       }}
     >
       <Layout style={{ height: '100vh', width: '100vw', overflow: 'hidden', position: 'relative' }}>
-        <Sider width={260} style={{ backgroundColor: '#0f141c', borderRight: '1px solid #2b3544' }}>
+        <Sider
+          width={260}
+          breakpoint="md"
+          collapsedWidth="0"
+          style={{ backgroundColor: '#0f141c', borderRight: '1px solid #2b3544' }}
+        >
           <BookList
             books={books}
             activeBookId={activeBookId}
@@ -367,7 +391,12 @@ export default function App(): React.ReactElement {
         </Content>
 
         {currentBook && (
-          <Sider width={300} style={{ backgroundColor: '#0f141c', borderLeft: '1px solid #2b3544' }}>
+          <Sider
+            width={300}
+            breakpoint="lg"
+            collapsedWidth="0"
+            style={{ backgroundColor: '#0f141c', borderLeft: '1px solid #2b3544' }}
+          >
             <CommentSidebar
               comments={comments}
               blocks={blocks}
