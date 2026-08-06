@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.2.0](https://github.com/Linya-IronMan/evening-reading/compare/v0.1.0...v0.2.0) (2026-08-06)
+
+### Bug Fixes
+
+* **tts:** 修复 Edge TTS 音色下架导致的播放失败问题，并移除不可用音色 ([bca93d8](https://github.com/Linya-IronMan/evening-reading/commit/bca93d8c02dfa0ac87c25a84b7a2b6be1c5b02f8))
 ## 0.1.0 (2026-08-06)
 
 ### Features
