@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Card, Button, Input, Popover, Space, Typography, Tag, Tooltip } from 'antd';
+import { Button, Input, Popover, Space, Typography, Tooltip } from 'antd';
 import { PlayCircleOutlined, SoundOutlined, EditOutlined, MessageOutlined, CheckOutlined, CloseOutlined, FormOutlined } from '@ant-design/icons';
 import { ParagraphBlock } from '../../types/reader';
 import { ActiveOperatingState } from './ReaderView';
@@ -173,78 +173,48 @@ export const ParagraphItem: React.FC<ParagraphItemProps> = ({
         }
       }}
     >
-      <Card
+      <div
         id={`block-${block.id}`}
-        className={isPlaying ? 'paragraph-card-active' : ''}
+        className={`paragraph-container ${isPlaying ? 'paragraph-active' : ''}`}
         style={{
-          marginBottom: '1rem',
-          backgroundColor: '#171e28',
-          borderColor: isPlaying ? '#d4af37' : '#2b3544',
-          borderRadius: '10px',
-          transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
-          position: 'relative',
           opacity: isOperatingOtherBlock ? 0.5 : 1,
           pointerEvents: isOperatingOtherBlock ? 'none' : 'auto',
         }}
-        bodyStyle={{ padding: '1rem 1.2rem' }}
         onMouseUp={handleMouseUp}
-        onClick={(e) => {
-          // 拦截点击事件，防止冒泡触发外部逻辑
-          e.stopPropagation();
-        }}
+        onClick={(e) => e.stopPropagation()}
       >
-        <div ref={cardRef} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-          <Space align="center" style={{ marginBottom: '0.5rem' }}>
-            <Tag color={isPlaying ? 'gold' : 'default'} style={{ fontSize: '0.75rem', borderRadius: '4px' }}>
-              #{block.index + 1}
-            </Tag>
-            {isPlaying && (
-              <Tag color="gold" icon={<SoundOutlined />}>
-                正在朗读
-              </Tag>
-            )}
-            {commentCount > 0 && (
-              <Tag color="blue" icon={<MessageOutlined />}>
-                {commentCount} 评论
-              </Tag>
-            )}
-          </Space>
-
-          <Space size="small">
-            <Tooltip title="从该段开始朗读">
-              <Button
-                type="text"
-                size="small"
-                icon={<PlayCircleOutlined style={{ color: isPlaying ? '#d4af37' : '#8c9ba8' }} />}
-                onClick={() => onPlay(block.id)}
-              >
-                朗读
-              </Button>
-            </Tooltip>
-            {!isEditing && (
-              <>
-                <Tooltip title="评论本段">
-                  <Button
-                    type="text"
-                    size="small"
-                    icon={<FormOutlined style={{ color: '#8c9ba8' }} />}
-                    onClick={handleParagraphComment}
-                  />
-                </Tooltip>
-                <Tooltip title="编辑此段落">
-                  <Button
-                    type="text"
-                    size="small"
-                    icon={<EditOutlined style={{ color: '#8c9ba8' }} />}
-                    onClick={() => {
-                      setEditValue(block.content);
-                      onActiveOperatingChange({ blockId: block.id, mode: 'editing' });
-                    }}
-                  />
-                </Tooltip>
-              </>
-            )}
-          </Space>
+        <div className="paragraph-actions">
+          <Tooltip title="从该段开始朗读" placement="left">
+            <Button
+              type="text"
+              size="small"
+              icon={<PlayCircleOutlined style={{ color: isPlaying ? '#d4af37' : '#8c9ba8' }} />}
+              onClick={() => onPlay(block.id)}
+            />
+          </Tooltip>
+          {!isEditing && (
+            <>
+              <Tooltip title="评论本段" placement="left">
+                <Button
+                  type="text"
+                  size="small"
+                  icon={<FormOutlined style={{ color: '#8c9ba8' }} />}
+                  onClick={handleParagraphComment}
+                />
+              </Tooltip>
+              <Tooltip title="编辑此段落" placement="left">
+                <Button
+                  type="text"
+                  size="small"
+                  icon={<EditOutlined style={{ color: '#8c9ba8' }} />}
+                  onClick={() => {
+                    setEditValue(block.content);
+                    onActiveOperatingChange({ blockId: block.id, mode: 'editing' });
+                  }}
+                />
+              </Tooltip>
+            </>
+          )}
         </div>
 
         {isEditing ? (
@@ -278,11 +248,11 @@ export const ParagraphItem: React.FC<ParagraphItemProps> = ({
             </div>
           </div>
         ) : (
-          <div className="reader-paragraph-text" style={{ marginTop: '0.3rem', cursor: 'text' }}>
+          <div className="reader-paragraph-text">
             {block.content}
           </div>
         )}
-      </Card>
+      </div>
     </Popover>
   );
 };
