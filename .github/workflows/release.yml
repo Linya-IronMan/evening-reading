@@ -43,6 +43,7 @@ jobs:
 
       - name: Extract Release Notes
         id: extract_notes
+        shell: bash
         run: |
           EOF=$(dd if=/dev/urandom bs=15 count=1 status=none | base64)
           echo "notes<<$EOF" >> $GITHUB_OUTPUT
