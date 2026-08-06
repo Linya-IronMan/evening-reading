@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.1.2](https://github.com/Linya-IronMan/evening-reading/compare/v0.1.1...v0.1.2) (2026-08-06)
+
+### Bug Fixes
+
+* **tauri:** 生成应用全平台图标以修复打包缺少 IconType 的错误 ([851add2](https://github.com/Linya-IronMan/evening-reading/commit/851add2d63718326506815661a796cb13c79f3ac))
 ## 0.1.1 (2026-08-06)
 
 ### Features
