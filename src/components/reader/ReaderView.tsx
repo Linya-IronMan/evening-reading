@@ -34,15 +34,35 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
 }) => {
   const virtuosoRef = React.useRef<VirtuosoHandle>(null);
   const [activeOperating, setActiveOperating] = React.useState<ActiveOperatingState>(null);
+  const isFollowMode = React.useRef(true);
 
+  // 1. 自动跟读滚屏 (仅在跟随模式激活时生效)
+  React.useEffect(() => {
+    if (isFollowMode.current && currentPlayingBlockId && virtuosoRef.current) {
+      const idx = blocks.findIndex((b) => b.id === currentPlayingBlockId);
+      if (idx !== -1) {
+        virtuosoRef.current.scrollToIndex({ index: idx, align: 'center', behavior: 'smooth' });
+      }
+    }
+  }, [currentPlayingBlockId, blocks]);
+
+  // 2. 响应外部强制跳转 (例如点击目录、点击定位按钮)
   React.useEffect(() => {
     if (scrollToBlockId && virtuosoRef.current) {
+      isFollowMode.current = true; // 强制跳转时重新激活跟随模式
       const idx = blocks.findIndex((b) => b.id === scrollToBlockId);
       if (idx !== -1) {
         virtuosoRef.current.scrollToIndex({ index: idx, align: 'center', behavior: 'smooth' });
       }
     }
   }, [scrollToBlockId, blocks]);
+
+  // 当用户手动滑动滚轮或触摸屏幕时，立刻关闭跟随模式，把控制权还给用户
+  const handleUserScroll = () => {
+    if (isFollowMode.current) {
+      isFollowMode.current = false;
+    }
+  };
   if (!currentBook) {
     return (
       <div style={{ display: 'flex', height: '100%', alignItems: 'center', justifyContent: 'center' }}>
@@ -83,7 +103,11 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
       </div>
 
       {/* 段落卡片列表滚动容器（引入虚拟化） */}
-      <div style={{ flex: 1, overflowY: 'auto' }}>
+      <div 
+        style={{ flex: 1, overflowY: 'auto' }} 
+        onWheel={handleUserScroll} 
+        onTouchMove={handleUserScroll}
+      >
         <Virtuoso
           ref={virtuosoRef}
           style={{ height: '100%' }}

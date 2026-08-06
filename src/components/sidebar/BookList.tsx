@@ -12,6 +12,7 @@ interface BookListProps {
   onSelectBook: (bookId: string) => void;
   onImportBook: (book: Book, blocks: any[]) => void;
   onDeleteBook: (bookId: string) => void;
+  onJumpToChapter?: (blockId: string) => void;
 }
 
 /**
@@ -25,6 +26,7 @@ export const BookList: React.FC<BookListProps> = ({
   onSelectBook,
   onImportBook,
   onDeleteBook,
+  onJumpToChapter,
 }) => {
   /**
    * 处理本地 TXT 文件选择导入
@@ -80,6 +82,7 @@ export const BookList: React.FC<BookListProps> = ({
           renderItem={(book) => {
             const isActive = book.id === activeBookId;
             return (
+              <React.Fragment key={book.id}>
               <List.Item
                 style={{
                   padding: '0.8rem',
@@ -134,6 +137,44 @@ export const BookList: React.FC<BookListProps> = ({
                   </Tooltip>
                 </Popconfirm>
               </List.Item>
+
+              {/* 渲染该书的目录（如果是当前选中书且包含目录） */}
+              {isActive && book.chapters && book.chapters.length > 0 && (
+                <div style={{ marginLeft: '1rem', borderLeft: '1px solid #2b3544', paddingLeft: '0.8rem', marginBottom: '0.8rem' }}>
+                  <Text type="secondary" style={{ fontSize: '0.8rem', marginBottom: '0.5rem', display: 'block' }}>
+                    小说目录 ({book.chapters.length})
+                  </Text>
+                  <div style={{ maxHeight: '200px', overflowY: 'auto', paddingRight: '0.5rem' }}>
+                    {(book.chapters || []).map((chapter, index) => (
+                      <div
+                        key={index}
+                        style={{
+                          padding: '0.3rem 0.5rem',
+                          fontSize: '0.85rem',
+                          color: '#8c9ba8',
+                          cursor: 'pointer',
+                          borderRadius: '4px',
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          transition: 'all 0.2s ease',
+                        }}
+                        onMouseEnter={(e) => (e.currentTarget.style.color = '#d4af37')}
+                        onMouseLeave={(e) => (e.currentTarget.style.color = '#8c9ba8')}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (onJumpToChapter) {
+                            onJumpToChapter(chapter.blockId);
+                          }
+                        }}
+                      >
+                        {chapter.title}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </React.Fragment>
             );
           }}
         />

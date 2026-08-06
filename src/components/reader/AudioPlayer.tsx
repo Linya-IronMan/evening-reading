@@ -1,6 +1,6 @@
 import React from 'react';
 import { Button, Segmented, Select, Space, Tag, Typography, Tooltip } from 'antd';
-import { PlayCircleFilled, PauseCircleFilled, StepBackwardOutlined, StepForwardOutlined, SoundOutlined, UserOutlined, LoadingOutlined } from '@ant-design/icons';
+import { PlayCircleFilled, PauseCircleFilled, StepBackwardOutlined, StepForwardOutlined, SoundOutlined, UserOutlined, LoadingOutlined, AimOutlined } from '@ant-design/icons';
 import { EDGE_VOICES } from '../../types/reader';
 
 const { Text } = Typography;
@@ -18,6 +18,7 @@ interface AudioPlayerProps {
   onNextBlock: () => void;
   onChangeRate: (rate: number) => void;
   onChangeVoice: (voiceId: string) => void;
+  onLocateCurrentBlock: () => void;
 }
 
 /**
@@ -36,6 +37,7 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
   onNextBlock,
   onChangeRate,
   onChangeVoice,
+  onLocateCurrentBlock,
 }) => {
   const hasCurrentBlock = currentBlockIndex > 0;
 
@@ -103,6 +105,16 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
             icon={<StepForwardOutlined style={{ fontSize: '1.1rem', color: '#f0f4f8' }} />}
             disabled={!hasCurrentBlock || currentBlockIndex >= totalBlocks}
             onClick={onNextBlock}
+          />
+        </Tooltip>
+
+        <Tooltip title="定位到当前朗读位置">
+          <Button
+            type="text"
+            shape="circle"
+            icon={<AimOutlined style={{ fontSize: '1.2rem', color: '#4096ff' }} />}
+            disabled={!hasCurrentBlock}
+            onClick={onLocateCurrentBlock}
           />
         </Tooltip>
       </Space>

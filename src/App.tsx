@@ -331,6 +331,7 @@ export default function App(): React.ReactElement {
             onSelectBook={handleSelectBook}
             onImportBook={handleImportBook}
             onDeleteBook={handleDeleteBook}
+            onJumpToChapter={handleScrollToBlock}
           />
         </Sider>
 
@@ -360,6 +361,7 @@ export default function App(): React.ReactElement {
               onNextBlock={handleNextBlock}
               onChangeRate={handleChangeRate}
               onChangeVoice={handleChangeVoice}
+              onLocateCurrentBlock={() => currentPlayingBlockId && handleScrollToBlock(currentPlayingBlockId)}
             />
           )}
         </Content>
