@@ -41,6 +41,14 @@ jobs:
       - name: install frontend dependencies
         run: pnpm install --no-frozen-lockfile
 
+      - name: Extract Release Notes
+        id: extract_notes
+        run: |
+          EOF=$(dd if=/dev/urandom bs=15 count=1 status=none | base64)
+          echo "notes<<$EOF" >> $GITHUB_OUTPUT
+          awk '/^## /{if (found) exit; found=1; next} found' CHANGELOG.md >> $GITHUB_OUTPUT
+          echo "$EOF" >> $GITHUB_OUTPUT
+
       - name: uses tauri-action
         uses: tauri-apps/tauri-action@v0
         env:
@@ -48,7 +56,7 @@ jobs:
         with:
           tagName: ${{ github.ref_name }}
           releaseName: 'Evening Reading ${{ github.ref_name }}'
-          releaseBody: '请参阅 CHANGELOG.md 获取本版本的详细更新日志。'
+          releaseBody: ${{ steps.extract_notes.outputs.notes }}
           releaseDraft: false
           prerelease: false
           args: ${{ matrix.args }}
