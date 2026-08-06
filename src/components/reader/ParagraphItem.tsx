@@ -184,7 +184,7 @@ export const ParagraphItem: React.FC<ParagraphItemProps> = ({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="paragraph-actions">
-          <Tooltip title="从该段开始朗读" placement="left">
+          <Tooltip title="从该段开始朗读" placement="top">
             <Button
               type="text"
               size="small"
@@ -194,7 +194,7 @@ export const ParagraphItem: React.FC<ParagraphItemProps> = ({
           </Tooltip>
           {!isEditing && (
             <>
-              <Tooltip title="评论本段" placement="left">
+              <Tooltip title="评论本段" placement="top">
                 <Button
                   type="text"
                   size="small"
@@ -202,7 +202,7 @@ export const ParagraphItem: React.FC<ParagraphItemProps> = ({
                   onClick={handleParagraphComment}
                 />
               </Tooltip>
-              <Tooltip title="编辑此段落" placement="left">
+              <Tooltip title="编辑此段落" placement="top">
                 <Button
                   type="text"
                   size="small"

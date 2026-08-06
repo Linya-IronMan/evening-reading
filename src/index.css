@@ -79,19 +79,27 @@ body {
 /* 纯 CSS 悬浮工具栏 (Pure CSS Hover Actions) */
 .paragraph-actions {
   position: absolute;
-  top: 0;
-  right: 0.5rem; /* 悬浮在右侧边缘内侧 */
+  top: -1rem; /* 悬浮在段落上方 */
+  right: 1.5rem; /* 靠近右侧 */
   opacity: 0;
   pointer-events: none;
-  transition: opacity 0.2s ease, right 0.2s ease;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  transform: translateY(5px);
   display: flex;
-  flex-direction: column;
-  gap: 0.3rem;
+  flex-direction: row; /* 水平排列 */
+  gap: 0.2rem;
+  background-color: rgba(32, 41, 54, 0.95);
+  backdrop-filter: blur(8px);
+  padding: 0.2rem 0.4rem;
+  border-radius: 6px;
+  border: 1px solid #2b3544;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  z-index: 10;
 }
 
 .paragraph-container:hover .paragraph-actions {
   opacity: 1;
-  right: 1.5rem; /* 向内滑入 */
+  transform: translateY(0);
   pointer-events: auto;
 }
 
