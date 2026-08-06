@@ -61,7 +61,7 @@ body {
 .paragraph-container {
   position: relative;
   margin-bottom: 1.2rem;
-  padding: 0.2rem 1.5rem;
+  padding: 0.2rem 3.5rem 0.2rem 1.5rem;
   border-left: 3px solid transparent;
   transition: all 0.3s ease;
 }
@@ -80,7 +80,7 @@ body {
 .paragraph-actions {
   position: absolute;
   top: 0;
-  right: -3rem; /* 悬浮在右侧边缘外 */
+  right: 0.5rem; /* 悬浮在右侧边缘内侧 */
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.2s ease, right 0.2s ease;
@@ -91,7 +91,7 @@ body {
 
 .paragraph-container:hover .paragraph-actions {
   opacity: 1;
-  right: -2rem; /* 向内滑入 */
+  right: 1.5rem; /* 向内滑入 */
   pointer-events: auto;
 }
 

@@ -113,7 +113,7 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
           style={{ height: '100%' }}
           data={blocks}
           itemContent={(index, block) => (
-            <div style={{ padding: '0 2rem', paddingTop: index === 0 ? '1.5rem' : 0 }}>
+            <div style={{ paddingLeft: '2rem', paddingRight: '0', paddingTop: index === 0 ? '1.5rem' : 0 }}>
               <ParagraphItem
                 block={block}
                 isPlaying={block.id === currentPlayingBlockId}
