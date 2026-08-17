@@ -36,7 +36,14 @@ export interface ReadingProgress {
   updatedAt: number;
 }
 
-// 4. 划线评论模型
+// 4. 划线评论与追加子评论模型
+export interface SubComment {
+  id: string;
+  content: string;
+  createdAt: number;
+  updatedAt?: number;
+}
+
 export interface Comment {
   id: string;
   bookId: string;
@@ -45,8 +52,10 @@ export interface Comment {
   endOffset: number;
   quoteText: string;
   content: string;
+  replies?: SubComment[]; // 追加的子评论列表
   isOrphaned?: boolean;
   createdAt: number;
+  updatedAt?: number;
 }
 
 // 5. 微软 Edge-TTS 神经网络音色配置

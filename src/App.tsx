@@ -9,6 +9,7 @@ import {
   saveStoredBlocks,
   getStoredComments,
   createStoredComment,
+  updateStoredComment,
   deleteStoredComment,
   getStoredProgress,
   saveStoredProgress,
@@ -384,6 +385,18 @@ export default function App(): React.ReactElement {
     }
   };
 
+  const handleUpdateComment = async (updatedComment: Comment) => {
+    if (!activeBookId) return;
+    try {
+      await updateStoredComment(activeBookId, updatedComment);
+      const updatedList = comments.map((c) => (c.id === updatedComment.id ? updatedComment : c));
+      setComments(updatedList);
+      message.success('笔记已更新');
+    } catch (e) {
+      message.error('更新失败');
+    }
+  };
+
   const handleDeleteComment = async (commentId: string) => {
     if (!activeBookId) return;
     try {
@@ -501,6 +514,7 @@ export default function App(): React.ReactElement {
               comments={comments}
               blocks={blocks}
               onScrollToBlock={handleScrollToBlock}
+              onUpdateComment={handleUpdateComment}
               onDeleteComment={handleDeleteComment}
             />
           </Sider>

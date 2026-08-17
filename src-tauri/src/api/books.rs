@@ -52,6 +52,16 @@ pub struct ReadingProgress {
 }
 
 #[derive(Serialize, Deserialize, Clone)]
+pub struct SubComment {
+    pub id: String,
+    pub content: String,
+    #[serde(rename = "createdAt")]
+    pub created_at: i64,
+    #[serde(rename = "updatedAt")]
+    pub updated_at: Option<i64>,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
 pub struct Comment {
     pub id: String,
     #[serde(rename = "bookId")]
@@ -65,10 +75,13 @@ pub struct Comment {
     #[serde(rename = "quoteText")]
     pub quote_text: String,
     pub content: String,
+    pub replies: Option<Vec<SubComment>>,
     #[serde(rename = "isOrphaned")]
     pub is_orphaned: Option<bool>,
     #[serde(rename = "createdAt")]
     pub created_at: i64,
+    #[serde(rename = "updatedAt")]
+    pub updated_at: Option<i64>,
 }
 
 // POST /api/books
@@ -243,9 +256,11 @@ pub async fn get_comments(
     State(state): State<AppState>,
 ) -> Result<Json<Vec<Comment>>, StatusCode> {
     let conn = state.db.lock().unwrap();
-    let mut stmt = conn.prepare("SELECT id, book_id, block_id, start_offset, end_offset, quote_text, content, is_orphaned, created_at FROM comments WHERE book_id = ?1 ORDER BY created_at DESC").map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let mut stmt = conn.prepare("SELECT id, book_id, block_id, start_offset, end_offset, quote_text, content, is_orphaned, created_at, replies FROM comments WHERE book_id = ?1 ORDER BY created_at DESC").map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
     let comments_iter = stmt.query_map([&id], |row| {
         let is_orphaned_int: i32 = row.get(7)?;
+        let replies_str: Option<String> = row.get(9)?;
+        let replies = replies_str.and_then(|s| serde_json::from_str(&s).ok());
         Ok(Comment {
             id: row.get(0)?,
             book_id: row.get(1)?,
@@ -254,8 +269,10 @@ pub async fn get_comments(
             end_offset: row.get(4)?,
             quote_text: row.get(5)?,
             content: row.get(6)?,
+            replies,
             is_orphaned: Some(is_orphaned_int != 0),
             created_at: row.get(8)?,
+            updated_at: None,
         })
     }).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
@@ -278,14 +295,40 @@ pub async fn create_comment(
         return Err(StatusCode::BAD_REQUEST);
     }
     let is_orphaned_int = if comment.is_orphaned.unwrap_or(false) { 1 } else { 0 };
+    let replies_json = comment.replies.as_ref().and_then(|r| serde_json::to_string(r).ok());
     conn.execute(
-        "INSERT INTO comments (id, book_id, block_id, start_offset, end_offset, quote_text, content, is_orphaned, created_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
-        (&comment.id, &comment.book_id, &comment.block_id, &comment.start_offset, &comment.end_offset, &comment.quote_text, &comment.content, &is_orphaned_int, &comment.created_at),
+        "INSERT INTO comments (id, book_id, block_id, start_offset, end_offset, quote_text, content, replies, is_orphaned, created_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
+        (&comment.id, &comment.book_id, &comment.block_id, &comment.start_offset, &comment.end_offset, &comment.quote_text, &comment.content, &replies_json, &is_orphaned_int, &comment.created_at),
     ).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
     let event = serde_json::to_string(&crate::api::ws::SyncEvent {
         event_type: "SYNC_COMMENTS".to_string(),
         book_id: id,
+    }).unwrap_or_default();
+    let _ = state.tx.send(event);
+
+    Ok(StatusCode::OK)
+}
+
+pub async fn update_comment(
+    Path((book_id, comment_id)): Path<(String, String)>,
+    State(state): State<AppState>,
+    Json(comment): Json<Comment>,
+) -> Result<StatusCode, StatusCode> {
+    let conn = state.db.lock().unwrap();
+    if comment.book_id != book_id || comment.id != comment_id {
+        return Err(StatusCode::BAD_REQUEST);
+    }
+    let is_orphaned_int = if comment.is_orphaned.unwrap_or(false) { 1 } else { 0 };
+    let replies_json = comment.replies.as_ref().and_then(|r| serde_json::to_string(r).ok());
+    conn.execute(
+        "UPDATE comments SET content = ?1, replies = ?2, is_orphaned = ?3 WHERE book_id = ?4 AND id = ?5",
+        (&comment.content, &replies_json, &is_orphaned_int, &book_id, &comment_id),
+    ).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    let event = serde_json::to_string(&crate::api::ws::SyncEvent {
+        event_type: "SYNC_COMMENTS".to_string(),
+        book_id,
     }).unwrap_or_default();
     let _ = state.tx.send(event);
 

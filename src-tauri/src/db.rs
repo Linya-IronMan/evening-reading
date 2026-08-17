@@ -63,11 +63,15 @@ pub fn init_db(db_path: PathBuf) -> Result<AppState> {
             end_offset INTEGER NOT NULL,
             quote_text TEXT NOT NULL,
             content TEXT NOT NULL,
+            replies TEXT,
             is_orphaned BOOLEAN DEFAULT 0,
             created_at INTEGER NOT NULL
         )",
         [],
     )?;
+
+    // 数据库增量平滑迁移（若已存在的旧数据库缺少 replies 列则自动补全）
+    let _ = conn.execute("ALTER TABLE comments ADD COLUMN replies TEXT", []);
 
     let (tx, _rx) = tokio::sync::broadcast::channel(100);
 

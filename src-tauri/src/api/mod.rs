@@ -64,7 +64,7 @@ pub fn create_router(state: AppState) -> Router {
         .route("/api/books/:id/progress", get(books::get_progress).put(books::update_progress))
         // Comments
         .route("/api/books/:id/comments", get(books::get_comments).post(books::create_comment))
-        .route("/api/books/:id/comments/:comment_id", delete(books::delete_comment))
+        .route("/api/books/:id/comments/:comment_id", put(books::update_comment).delete(books::delete_comment))
         // TTS
         .route("/api/tts", post(tts::handle_tts))
         // WebSocket

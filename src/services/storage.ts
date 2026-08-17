@@ -115,6 +115,21 @@ export async function createStoredComment(bookId: string, comment: Comment): Pro
 }
 
 /**
+ * 更新评论（支持修改内容及子评论列表）
+ */
+export async function updateStoredComment(bookId: string, comment: Comment): Promise<void> {
+  try {
+    await fetchWithRetry(`/api/books/${bookId}/comments/${comment.id}`, {
+      method: 'PUT',
+      body: JSON.stringify(comment),
+    });
+  } catch (err) {
+    console.error(`Failed to update comment ${comment.id}:`, err);
+    throw err;
+  }
+}
+
+/**
  * 删除评论
  */
 export async function deleteStoredComment(bookId: string, commentId: string): Promise<void> {
