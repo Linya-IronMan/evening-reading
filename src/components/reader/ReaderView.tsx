@@ -57,12 +57,18 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
     }
   }, [scrollToBlockId, blocks]);
 
+  // 汇总所有章节目录 Block ID
+  const chapterBlockIds = React.useMemo(() => {
+    return new Set(currentBook?.chapters?.map((c) => c.blockId) || []);
+  }, [currentBook]);
+
   // 当用户手动滑动滚轮或触摸屏幕时，立刻关闭跟随模式，把控制权还给用户
   const handleUserScroll = () => {
     if (isFollowMode.current) {
       isFollowMode.current = false;
     }
   };
+
   if (!currentBook) {
     return (
       <div style={{ display: 'flex', height: '100%', alignItems: 'center', justifyContent: 'center' }}>
@@ -78,11 +84,6 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
       commentCountMap.set(c.blockId, (commentCountMap.get(c.blockId) || 0) + 1);
     }
   }
-
-  // 汇总所有章节目录 Block ID
-  const chapterBlockIds = React.useMemo(() => {
-    return new Set(currentBook?.chapters?.map((c) => c.blockId) || []);
-  }, [currentBook]);
 
   return (
     <div 
@@ -120,19 +121,19 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
           ref={virtuosoRef}
           style={{ height: '100%' }}
           data={blocks}
-          context={{ activeOperating, currentPlayingBlockId, commentCountMap, chapterBlockIds }}
-          itemContent={(index, block, context) => {
-            const isChapterHeader = context.chapterBlockIds.has(block.id) || (
-              block.content.length < 50 && /^第\s*[一二三四五六七八九十百千万0-9]+\s*[章节回卷]/.test(block.content)
+          itemContent={(index, block) => {
+            const isChapterHeader = Boolean(
+              chapterBlockIds?.has(block.id) ||
+              (block.content.length < 50 && /^第\s*[一二三四五六七八九十百千万0-9]+\s*[章节回卷]/.test(block.content))
             );
             return (
               <div style={{ paddingLeft: '2rem', paddingRight: '0', paddingTop: index === 0 ? '1.5rem' : 0 }}>
                 <ParagraphItem
                   block={block}
-                  isPlaying={block.id === context.currentPlayingBlockId}
+                  isPlaying={block.id === currentPlayingBlockId}
                   isChapterHeader={isChapterHeader}
-                  commentCount={context.commentCountMap.get(block.id) || 0}
-                  activeOperating={context.activeOperating}
+                  commentCount={commentCountMap.get(block.id) || 0}
+                  activeOperating={activeOperating}
                   onActiveOperatingChange={setActiveOperating}
                   onPlay={onPlayBlock}
                   onUpdateContent={onUpdateBlockContent}
