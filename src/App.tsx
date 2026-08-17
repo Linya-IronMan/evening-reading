@@ -396,9 +396,21 @@ export default function App(): React.ReactElement {
     }
   };
 
-  const handleScrollToBlock = (blockId: string) => {
+  const [flashingTarget, setFlashingTarget] = useState<{ blockId: string; quoteText?: string; key: number } | null>(null);
+  const flashTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const handleScrollToBlock = (blockId: string, quoteText?: string) => {
     setScrollToBlockId(blockId);
     setTimeout(() => setScrollToBlockId(null), 100);
+
+    // 触发正文高亮呼吸闪烁 (持续 2.5 秒)
+    if (flashTimerRef.current) {
+      clearTimeout(flashTimerRef.current);
+    }
+    setFlashingTarget({ blockId, quoteText, key: Date.now() });
+    flashTimerRef.current = setTimeout(() => {
+      setFlashingTarget(null);
+    }, 2500);
   };
 
   const currentBook = books.find((b) => b.id === activeBookId) || null;
@@ -453,6 +465,7 @@ export default function App(): React.ReactElement {
             comments={comments}
             currentPlayingBlockId={currentPlayingBlockId}
             scrollToBlockId={scrollToBlockId}
+            flashingTarget={flashingTarget}
             onPlayBlock={handlePlayBlock}
             onUpdateBlockContent={handleUpdateBlockContent}
             onCreateComment={handleCreateComment}

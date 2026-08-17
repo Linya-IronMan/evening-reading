@@ -11,6 +11,8 @@ interface ParagraphItemProps {
   block: ParagraphBlock;
   isPlaying: boolean;
   isChapterHeader?: boolean;
+  isFlashing?: boolean;
+  flashingQuote?: string;
   commentCount: number;
   activeOperating: ActiveOperatingState;
   onActiveOperatingChange: (state: ActiveOperatingState) => void;
@@ -26,6 +28,8 @@ export const ParagraphItem: React.FC<ParagraphItemProps> = ({
   block,
   isPlaying,
   isChapterHeader = false,
+  isFlashing = false,
+  flashingQuote,
   commentCount,
   activeOperating,
   onActiveOperatingChange,
@@ -178,7 +182,7 @@ export const ParagraphItem: React.FC<ParagraphItemProps> = ({
     >
       <div
         id={`block-${block.id}`}
-        className={`paragraph-container ${isPlaying ? 'paragraph-active' : ''} ${isSelected ? 'paragraph-selected' : ''} ${isChapterHeader ? 'paragraph-chapter-header' : ''}`}
+        className={`paragraph-container ${isPlaying ? 'paragraph-active' : ''} ${isSelected ? 'paragraph-selected' : ''} ${isChapterHeader ? 'paragraph-chapter-header' : ''} ${isFlashing ? 'paragraph-flashing' : ''}`}
         style={{
           opacity: isOperatingOtherBlock ? 0.5 : 1,
           cursor: isOperatingOtherBlock ? 'default' : 'pointer',
@@ -269,7 +273,28 @@ export const ParagraphItem: React.FC<ParagraphItemProps> = ({
           </div>
         ) : (
           <div className="reader-paragraph-text">
-            {block.content}
+            {(() => {
+              if (!isFlashing || !flashingQuote) {
+                return block.content;
+              }
+              const cleanQuote = flashingQuote.replace(/^【全段点评】/, '').trim();
+              if (!cleanQuote || !block.content.includes(cleanQuote)) {
+                return block.content;
+              }
+              const parts = block.content.split(cleanQuote);
+              return (
+                <>
+                  {parts.map((part, i) => (
+                    <React.Fragment key={i}>
+                      {part}
+                      {i < parts.length - 1 && (
+                        <mark className="quote-highlight-flash">{cleanQuote}</mark>
+                      )}
+                    </React.Fragment>
+                  ))}
+                </>
+              );
+            })()}
           </div>
         )}
       </div>

@@ -8,7 +8,7 @@ const { Text, Paragraph } = Typography;
 interface CommentSidebarProps {
   comments: Comment[];
   blocks: ParagraphBlock[];
-  onScrollToBlock: (blockId: string) => void;
+  onScrollToBlock: (blockId: string, quoteText?: string) => void;
   onDeleteComment: (commentId: string) => void;
 }
 
@@ -73,7 +73,7 @@ export const CommentSidebar: React.FC<CommentSidebarProps> = ({
                         type="text"
                         size="small"
                         icon={<AimOutlined style={{ color: '#4096ff' }} />}
-                        onClick={() => onScrollToBlock(comment.blockId)}
+                        onClick={() => onScrollToBlock(comment.blockId, comment.quoteText)}
                       >
                         定位
                       </Button>

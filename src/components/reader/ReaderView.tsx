@@ -12,6 +12,7 @@ interface ReaderViewProps {
   comments: Comment[];
   currentPlayingBlockId: string | null;
   scrollToBlockId?: string | null;
+  flashingTarget?: { blockId: string; quoteText?: string; key: number } | null;
   onPlayBlock: (blockId: string) => void;
   onUpdateBlockContent: (blockId: string, newContent: string) => void;
   onCreateComment: (blockId: string, quoteText: string, commentContent: string) => void;
@@ -28,6 +29,7 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
   comments,
   currentPlayingBlockId,
   scrollToBlockId,
+  flashingTarget,
   onPlayBlock,
   onUpdateBlockContent,
   onCreateComment,
@@ -132,6 +134,8 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
                   block={block}
                   isPlaying={block.id === currentPlayingBlockId}
                   isChapterHeader={isChapterHeader}
+                  isFlashing={flashingTarget?.blockId === block.id}
+                  flashingQuote={flashingTarget?.blockId === block.id ? flashingTarget.quoteText : undefined}
                   commentCount={commentCountMap.get(block.id) || 0}
                   activeOperating={activeOperating}
                   onActiveOperatingChange={setActiveOperating}
