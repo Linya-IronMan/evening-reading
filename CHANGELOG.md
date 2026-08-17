@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.2.2](https://github.com/Linya-IronMan/evening-reading/compare/v0.2.1...v0.2.2) (2026-08-17)
+
+### Features
+
+* 新增设置面板、Cmd+, 快捷键支持与局域网 Web 访问健康检查 ([1cf006b](https://github.com/Linya-IronMan/evening-reading/commit/1cf006b767c6694e6746d566822a7a9fd151a184))
+* 新增设置面板音色一键测试功能并重构朗读段落高亮样式 ([60f1697](https://github.com/Linya-IronMan/evening-reading/commit/60f1697070b2b81cdbc6010d7b952b26fb1c8504))
 ## [0.2.1](https://github.com/Linya-IronMan/evening-reading/compare/v0.2.0...v0.2.1) (2026-08-17)
 
 ### Features
