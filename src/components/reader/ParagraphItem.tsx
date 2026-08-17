@@ -45,31 +45,49 @@ export const ParagraphItem: React.FC<ParagraphItemProps> = ({
 
   // 选中文本评论 Popover 状态
   const popoverRef = useRef<HTMLDivElement>(null);
-  const cardRef = useRef<HTMLDivElement>(null);
+  const lastSelectionTimeRef = useRef<number>(0);
   const [selectedText, setSelectedText] = useState<string>('');
   const [commentInput, setCommentInput] = useState<string>('');
   const [popoverOpen, setPopoverOpen] = useState<boolean>(false);
 
-  // 全局清理：点击外部关闭 Popover
+  // 同步外部 activeOperating 状态：如果当前不是 commenting，则确保 popover 关闭
   useEffect(() => {
-    const handleGlobalMouseDown = (e: MouseEvent) => {
-      if (popoverOpen) {
-        const target = e.target as Node;
-        // 如果点击不在 popover 内部，且不在 card 内部，则关闭
-        if (
-          popoverRef.current && !popoverRef.current.contains(target) &&
-          cardRef.current && !cardRef.current.contains(target)
-        ) {
-          setPopoverOpen(false);
-          onActiveOperatingChange(null);
-          window.getSelection()?.removeAllRanges();
-        }
+    if (activeOperating?.blockId !== block.id || activeOperating?.mode !== 'commenting') {
+      setPopoverOpen(false);
+    }
+  }, [activeOperating, block.id]);
+
+  // 全局清理：点击页面任意其他地方时自动关闭 Popover
+  useEffect(() => {
+    if (!popoverOpen) return;
+
+    const handleGlobalPointerDown = (e: MouseEvent | PointerEvent) => {
+      // 如果刚刚进行了文本划选，忽略本次 pointerdown 判定
+      if (Date.now() - lastSelectionTimeRef.current < 250) {
+        return;
       }
+
+      const target = e.target as HTMLElement | null;
+      if (!target) return;
+
+      // 如果点击在 Ant Design 的 Popover 气泡弹层内部，则保持打开
+      if (target.closest && (target.closest('.ant-popover') || target.closest('.ant-popover-content'))) {
+        return;
+      }
+      if (popoverRef.current && popoverRef.current.contains(target)) {
+        return;
+      }
+
+      // 点击外部：自动关闭弹窗并清理高亮选区
+      setPopoverOpen(false);
+      onActiveOperatingChange(null);
+      window.getSelection()?.removeAllRanges();
     };
-    
-    document.addEventListener('mousedown', handleGlobalMouseDown);
+
+    // 使用捕获阶段捕获所有外部点击
+    document.addEventListener('pointerdown', handleGlobalPointerDown, true);
     return () => {
-      document.removeEventListener('mousedown', handleGlobalMouseDown);
+      document.removeEventListener('pointerdown', handleGlobalPointerDown, true);
     };
   }, [popoverOpen, onActiveOperatingChange]);
 
@@ -83,6 +101,7 @@ export const ParagraphItem: React.FC<ParagraphItemProps> = ({
     if (selection && !selection.isCollapsed) {
       const text = selection.toString().trim();
       if (text.length > 0) {
+        lastSelectionTimeRef.current = Date.now();
         setSelectedText(text);
         setPopoverOpen(true);
         onActiveOperatingChange({ blockId: block.id, mode: 'commenting' });
@@ -190,6 +209,16 @@ export const ParagraphItem: React.FC<ParagraphItemProps> = ({
         onMouseUp={handleMouseUp}
         onClick={(e) => {
           e.stopPropagation();
+
+          // 如果刚刚进行了划选，或者当前正处于评论弹窗输入模式，不切换段落卡片选中态
+          if (Date.now() - lastSelectionTimeRef.current < 300 || popoverOpen) {
+            return;
+          }
+          const sel = window.getSelection();
+          if (sel && !sel.isCollapsed && sel.toString().trim().length > 0) {
+            return;
+          }
+
           if (!isEditing && !isOperatingOtherBlock) {
             // Toggle selection
             if (isSelected) {
