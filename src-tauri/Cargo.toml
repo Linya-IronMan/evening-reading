@@ -1,6 +1,6 @@
 [package]
 name = "evening_reading_lib"
-version = "0.2.0"
+version = "0.2.1"
 description = "Evening Reading Tauri Application"
 edition = "2021"
 default-run = "evening_reading_lib"

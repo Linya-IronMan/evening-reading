@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.2.1](https://github.com/Linya-IronMan/evening-reading/compare/v0.2.0...v0.2.1) (2026-08-17)
+
+### Features
+
+* **updater:** 接入 Tauri 2 原地热更新与 Minisign 签名验签体系 ([17184d1](https://github.com/Linya-IronMan/evening-reading/commit/17184d1452dc4408b14386af8a5f107a1d12c671))
 ## [0.2.0](https://github.com/Linya-IronMan/evening-reading/compare/v0.1.0...v0.2.0) (2026-08-06)
 
 ### Bug Fixes
