@@ -76,6 +76,29 @@ body {
   transition: color 0.2s ease;
 }
 
+/* 章节划分标题段落排版 (Chapter Heading Paragraph Typography) */
+.paragraph-container.paragraph-chapter-header {
+  margin-top: 2.2rem;
+  margin-bottom: 1.4rem;
+  padding-bottom: 0.8rem;
+  border-bottom: 1px dashed rgba(212, 175, 55, 0.25);
+}
+
+.paragraph-chapter-header .reader-paragraph-text {
+  font-size: 1.55rem;
+  font-weight: 700;
+  line-height: 1.5;
+  color: var(--accent-gold);
+  text-indent: 0; /* 章节大标题取消首行 2em 缩进 */
+  letter-spacing: 0.04em;
+  text-shadow: 0 2px 10px rgba(212, 175, 55, 0.2);
+}
+
+.paragraph-chapter-header.paragraph-active .reader-paragraph-text {
+  color: #ffffff;
+  text-shadow: 0 0 16px rgba(212, 175, 55, 0.4);
+}
+
 /* 纯 CSS 悬浮工具栏 (Pure CSS Hover Actions) */
 .paragraph-actions {
   position: absolute;

@@ -79,6 +79,11 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
     }
   }
 
+  // 汇总所有章节目录 Block ID
+  const chapterBlockIds = React.useMemo(() => {
+    return new Set(currentBook?.chapters?.map((c) => c.blockId) || []);
+  }, [currentBook]);
+
   return (
     <div 
       style={{ height: '100%', display: 'flex', flexDirection: 'column' }}
@@ -115,21 +120,27 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
           ref={virtuosoRef}
           style={{ height: '100%' }}
           data={blocks}
-          context={{ activeOperating, currentPlayingBlockId, commentCountMap }}
-          itemContent={(index, block, context) => (
-            <div style={{ paddingLeft: '2rem', paddingRight: '0', paddingTop: index === 0 ? '1.5rem' : 0 }}>
-              <ParagraphItem
-                block={block}
-                isPlaying={block.id === context.currentPlayingBlockId}
-                commentCount={context.commentCountMap.get(block.id) || 0}
-                activeOperating={context.activeOperating}
-                onActiveOperatingChange={setActiveOperating}
-                onPlay={onPlayBlock}
-                onUpdateContent={onUpdateBlockContent}
-                onCreateComment={onCreateComment}
-              />
-            </div>
-          )}
+          context={{ activeOperating, currentPlayingBlockId, commentCountMap, chapterBlockIds }}
+          itemContent={(index, block, context) => {
+            const isChapterHeader = context.chapterBlockIds.has(block.id) || (
+              block.content.length < 50 && /^第\s*[一二三四五六七八九十百千万0-9]+\s*[章节回卷]/.test(block.content)
+            );
+            return (
+              <div style={{ paddingLeft: '2rem', paddingRight: '0', paddingTop: index === 0 ? '1.5rem' : 0 }}>
+                <ParagraphItem
+                  block={block}
+                  isPlaying={block.id === context.currentPlayingBlockId}
+                  isChapterHeader={isChapterHeader}
+                  commentCount={context.commentCountMap.get(block.id) || 0}
+                  activeOperating={context.activeOperating}
+                  onActiveOperatingChange={setActiveOperating}
+                  onPlay={onPlayBlock}
+                  onUpdateContent={onUpdateBlockContent}
+                  onCreateComment={onCreateComment}
+                />
+              </div>
+            );
+          }}
           components={{
             Footer: () => <div style={{ height: '10rem' }} />
           }}

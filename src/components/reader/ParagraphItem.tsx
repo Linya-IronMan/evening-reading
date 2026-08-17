@@ -10,6 +10,7 @@ const { Text } = Typography;
 interface ParagraphItemProps {
   block: ParagraphBlock;
   isPlaying: boolean;
+  isChapterHeader?: boolean;
   commentCount: number;
   activeOperating: ActiveOperatingState;
   onActiveOperatingChange: (state: ActiveOperatingState) => void;
@@ -24,6 +25,7 @@ interface ParagraphItemProps {
 export const ParagraphItem: React.FC<ParagraphItemProps> = ({
   block,
   isPlaying,
+  isChapterHeader = false,
   commentCount,
   activeOperating,
   onActiveOperatingChange,
@@ -176,7 +178,7 @@ export const ParagraphItem: React.FC<ParagraphItemProps> = ({
     >
       <div
         id={`block-${block.id}`}
-        className={`paragraph-container ${isPlaying ? 'paragraph-active' : ''} ${isSelected ? 'paragraph-selected' : ''}`}
+        className={`paragraph-container ${isPlaying ? 'paragraph-active' : ''} ${isSelected ? 'paragraph-selected' : ''} ${isChapterHeader ? 'paragraph-chapter-header' : ''}`}
         style={{
           opacity: isOperatingOtherBlock ? 0.5 : 1,
           cursor: isOperatingOtherBlock ? 'default' : 'pointer',
