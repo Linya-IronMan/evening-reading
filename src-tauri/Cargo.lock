@@ -1076,7 +1076,7 @@ dependencies = [
 
 [[package]]
 name = "evening_reading_lib"
-version = "0.2.2"
+version = "0.2.3"
 dependencies = [
  "axum",
  "chrono",

@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.2.3](https://github.com/Linya-IronMan/evening-reading/compare/v0.2.2...v0.2.3) (2026-08-17)
+
+### Features
+
+* 增加章节划分段落的大号字体与排版样式 ([5a3d40b](https://github.com/Linya-IronMan/evening-reading/commit/5a3d40b830cfdb93e47c15480bc6ca453198569d))
+* 支持评论就地编辑、追加子评论与卡片界面精简 ([61fffa6](https://github.com/Linya-IronMan/evening-reading/commit/61fffa6b0f03930db2e5aae417abc4fec534bdd5))
+* 评论定位时增加正文段落与划线文本高亮闪烁效果 ([e85cb78](https://github.com/Linya-IronMan/evening-reading/commit/e85cb787503a363b00488d5b48078d1c7f7efd26))
+
+### Bug Fixes
+
+* 优化划线评论弹窗点击外部自动关闭并消除划选点击事件冲突 ([7dc2810](https://github.com/Linya-IronMan/evening-reading/commit/7dc2810efcdd4dd763e96167db9660738354e4a1))
+* 修复 Hooks 调用顺序导致的页面黑屏并添加全局错误边界 ([c72c416](https://github.com/Linya-IronMan/evening-reading/commit/c72c416b96548e31b99d14328174121b74ce019a))
 ## [0.2.2](https://github.com/Linya-IronMan/evening-reading/compare/v0.2.1...v0.2.2) (2026-08-17)
 
 ### Features
