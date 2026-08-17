@@ -64,7 +64,7 @@ export async function saveStoredBlocks(bookId: string, blocks: ParagraphBlock[])
 export async function getStoredProgress(bookId: string): Promise<ReadingProgress | null> {
   try {
     const res = await fetchWithRetry(`/api/books/${bookId}/progress`);
-    if (res.status === 404) return null;
+    if (!res.ok) return null;
     return await res.json();
   } catch (err) {
     console.error(`Failed to get progress for book ${bookId}:`, err);

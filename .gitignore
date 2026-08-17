@@ -35,4 +35,6 @@ src-tauri/gen
 src-tauri/.tauri/
 *.key
 *.key.pub
+.pnpm-store
+
 

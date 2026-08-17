@@ -38,20 +38,23 @@ async fn static_handler(uri: Uri) -> impl IntoResponse {
     }
 }
 
+async fn health_check() -> impl IntoResponse {
+    (
+        StatusCode::OK,
+        [(header::CONTENT_TYPE, "application/json")],
+        r#"{"status":"ok","message":"healthy"}"#,
+    )
+}
+
 pub fn create_router(state: AppState) -> Router {
     let cors = CorsLayer::new()
         .allow_methods(Any)
         .allow_headers(Any)
-        .allow_origin([
-            "http://localhost:5173".parse::<axum::http::HeaderValue>().unwrap(),
-            "http://127.0.0.1:5173".parse::<axum::http::HeaderValue>().unwrap(),
-            "http://localhost:1420".parse::<axum::http::HeaderValue>().unwrap(),
-            "http://127.0.0.1:1420".parse::<axum::http::HeaderValue>().unwrap(),
-            "tauri://localhost".parse::<axum::http::HeaderValue>().unwrap(),
-            "http://tauri.localhost".parse::<axum::http::HeaderValue>().unwrap(),
-        ]);
+        .allow_origin(Any);
 
     Router::new()
+        // Health check
+        .route("/api/health", get(health_check))
         // Book metadata
         .route("/api/books", get(books::list_books).post(books::import_book))
         .route("/api/books/:id", delete(books::delete_book))

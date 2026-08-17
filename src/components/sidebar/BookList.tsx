@@ -1,6 +1,6 @@
 import React from 'react';
 import { List, Button, Typography, Popconfirm, Tooltip, Space, Badge } from 'antd';
-import { BookOutlined, FileAddOutlined, DeleteOutlined, CheckCircleFilled, CloudDownloadOutlined } from '@ant-design/icons';
+import { BookOutlined, FileAddOutlined, DeleteOutlined, CheckCircleFilled, CloudDownloadOutlined, SettingOutlined } from '@ant-design/icons';
 import { Book } from '../../types/reader';
 import { importTxtFile } from '../../services/importer';
 
@@ -19,6 +19,8 @@ interface BookListProps {
   hasUpdate?: boolean;
   /** 打开更新弹窗回调 */
   onOpenUpdater?: () => void;
+  /** 打开设置面板回调 */
+  onOpenSettings?: () => void;
 }
 
 /**
@@ -33,9 +35,10 @@ export const BookList: React.FC<BookListProps> = ({
   onImportBook,
   onDeleteBook,
   onJumpToChapter,
-  appVersion = '0.2.0',
+  appVersion = '0.2.1',
   hasUpdate = false,
   onOpenUpdater,
+  onOpenSettings,
 }) => {
   /**
    * 处理本地 TXT 文件选择导入
@@ -65,17 +68,28 @@ export const BookList: React.FC<BookListProps> = ({
           </Text>
         </Space>
 
-        <label htmlFor="txt-upload-input">
-          <Button
-            type="primary"
-            icon={<FileAddOutlined />}
-            size="small"
-            style={{ backgroundColor: '#d4af37', borderColor: '#d4af37' }}
-            onClick={() => document.getElementById('txt-upload-input')?.click()}
-          >
-            导入 TXT
-          </Button>
-        </label>
+        <Space size={8}>
+          <Tooltip title="设置 (⌘,)">
+            <Button
+              type="text"
+              size="small"
+              icon={<SettingOutlined style={{ color: '#8c9ba8', fontSize: '1rem' }} />}
+              onClick={onOpenSettings}
+            />
+          </Tooltip>
+
+          <label htmlFor="txt-upload-input">
+            <Button
+              type="primary"
+              icon={<FileAddOutlined />}
+              size="small"
+              style={{ backgroundColor: '#d4af37', borderColor: '#d4af37' }}
+              onClick={() => document.getElementById('txt-upload-input')?.click()}
+            >
+              导入 TXT
+            </Button>
+          </label>
+        </Space>
         <input
           id="txt-upload-input"
           type="file"
@@ -208,19 +222,35 @@ export const BookList: React.FC<BookListProps> = ({
           </Badge>
         </Space>
 
-        <Button
-          type="text"
-          size="small"
-          icon={<CloudDownloadOutlined style={{ color: hasUpdate ? '#d4af37' : '#8c9ba8' }} />}
-          onClick={onOpenUpdater}
-          style={{
-            fontSize: '0.8rem',
-            color: hasUpdate ? '#d4af37' : '#8c9ba8',
-            padding: '0 4px',
-          }}
-        >
-          {hasUpdate ? '发现新版本' : '检查更新'}
-        </Button>
+        <Space size={4}>
+          <Tooltip title="打开设置 (⌘,)">
+            <Button
+              type="text"
+              size="small"
+              icon={<SettingOutlined style={{ color: '#8c9ba8' }} />}
+              onClick={onOpenSettings}
+              style={{
+                fontSize: '0.8rem',
+                color: '#8c9ba8',
+                padding: '0 4px',
+              }}
+            />
+          </Tooltip>
+
+          <Button
+            type="text"
+            size="small"
+            icon={<CloudDownloadOutlined style={{ color: hasUpdate ? '#d4af37' : '#8c9ba8' }} />}
+            onClick={onOpenUpdater}
+            style={{
+              fontSize: '0.8rem',
+              color: hasUpdate ? '#d4af37' : '#8c9ba8',
+              padding: '0 4px',
+            }}
+          >
+            {hasUpdate ? '发现新版本' : '检查更新'}
+          </Button>
+        </Space>
       </div>
     </div>
   );

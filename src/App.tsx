@@ -21,6 +21,7 @@ import { ReaderView } from './components/reader/ReaderView';
 import { AudioPlayer } from './components/reader/AudioPlayer';
 import { CommentSidebar } from './components/comments/CommentSidebar';
 import { UpdateModal } from './components/updater/UpdateModal';
+import { SettingsModal } from './components/settings/SettingsModal';
 import { useUpdater } from './hooks/useUpdater';
 
 const { Sider, Content } = Layout;
@@ -44,6 +45,22 @@ export default function App(): React.ReactElement {
   // 软件更新状态机与弹窗控制
   const updater = useUpdater({ isBusy: isPlaying || isAudioLoading });
   const [isUpdateModalOpen, setIsUpdateModalOpen] = useState<boolean>(false);
+
+  // 设置弹窗控制与 ⌘ + , 快捷键注册
+  const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // 捕获 Cmd + , 或 Ctrl + ,，排除键盘长按 repeat 导致的连续开合
+      if (!e.repeat && (e.metaKey || e.ctrlKey) && (e.key === ',' || e.code === 'Comma')) {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsSettingsOpen((prev) => !prev);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   /**
    * 安全重启应用并持久化当前阅读进度
@@ -155,35 +172,72 @@ export default function App(): React.ReactElement {
     });
   }, [activeBookId]);
 
-  // WebSocket 实时同步
+  // WebSocket 实时同步（带静默重连机制）
   useEffect(() => {
+    const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsHost = window.location.hostname || '127.0.0.1';
     const wsUrl = window.location.port === '1421'
-      ? `ws://${window.location.host}/api/ws`
-      : 'ws://127.0.0.1:1421/api/ws';
+      ? `${wsProtocol}//${window.location.host}/api/ws`
+      : `${wsProtocol}//${wsHost}:1421/api/ws`;
     
-    const ws = new WebSocket(wsUrl);
-    ws.onmessage = (event) => {
+    let ws: WebSocket | null = null;
+    let reconnectTimer: NodeJS.Timeout | null = null;
+    let isDisposed = false;
+
+    const connect = () => {
+      if (isDisposed) return;
       try {
-        if (!activeBookId) return;
-        const data = JSON.parse(event.data);
-        if (data.book_id === activeBookId) {
-          if (data.event_type === 'SYNC_PROGRESS') {
-            getStoredProgress(activeBookId).then(p => {
-              if (p && p.currentBlockId !== currentPlayingBlockId) {
-                setCurrentPlayingBlockId(p.currentBlockId);
+        ws = new WebSocket(wsUrl);
+
+        ws.onmessage = (event) => {
+          try {
+            if (!activeBookId) return;
+            const data = JSON.parse(event.data);
+            if (data.book_id === activeBookId) {
+              if (data.event_type === 'SYNC_PROGRESS') {
+                getStoredProgress(activeBookId).then(p => {
+                  if (p && p.currentBlockId !== currentPlayingBlockId) {
+                    setCurrentPlayingBlockId(p.currentBlockId);
+                  }
+                });
+              } else if (data.event_type === 'SYNC_BLOCKS') {
+                getStoredBlocks(activeBookId).then(setBlocks);
+              } else if (data.event_type === 'SYNC_COMMENTS') {
+                getStoredComments(activeBookId).then(setComments);
               }
-            });
-          } else if (data.event_type === 'SYNC_BLOCKS') {
-            getStoredBlocks(activeBookId).then(setBlocks);
-          } else if (data.event_type === 'SYNC_COMMENTS') {
-            getStoredComments(activeBookId).then(setComments);
+            }
+          } catch (e) {
+            console.error("WS Parse error", e);
           }
+        };
+
+        ws.onclose = () => {
+          if (!isDisposed) {
+            // 离线/服务未建立时 5 秒后尝试重连
+            reconnectTimer = setTimeout(connect, 5000);
+          }
+        };
+
+        ws.onerror = () => {
+          // 忽略建立阶段的阶段性连接失败
+          if (ws) {
+            ws.close();
+          }
+        };
+      } catch {
+        if (!isDisposed) {
+          reconnectTimer = setTimeout(connect, 5000);
         }
-      } catch (e) {
-        console.error("WS Parse error", e);
       }
     };
-    return () => ws.close();
+
+    connect();
+
+    return () => {
+      isDisposed = true;
+      if (reconnectTimer) clearTimeout(reconnectTimer);
+      if (ws) ws.close();
+    };
   }, [activeBookId, currentPlayingBlockId]);
 
   // --- 业务交互句柄 ---
@@ -388,6 +442,7 @@ export default function App(): React.ReactElement {
                 updater.checkForUpdate(true);
               }
             }}
+            onOpenSettings={() => setIsSettingsOpen(true)}
           />
         </Sider>
 
@@ -452,6 +507,14 @@ export default function App(): React.ReactElement {
         onCheckForUpdate={() => updater.checkForUpdate(true)}
         onInstallUpdate={() => updater.installUpdate()}
         onRestart={handleRestartApp}
+      />
+
+      {/* 软件设置弹窗 (⌘,) */}
+      <SettingsModal
+        open={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
+        updater={updater}
+        onRestartApp={handleRestartApp}
       />
     </ConfigProvider>
   );

@@ -198,20 +198,20 @@ pub async fn update_blocks(
 pub async fn get_progress(
     Path(id): Path<String>,
     State(state): State<AppState>,
-) -> Result<Json<ReadingProgress>, StatusCode> {
+) -> Result<Json<Option<ReadingProgress>>, StatusCode> {
     let conn = state.db.lock().unwrap();
     let mut stmt = conn.prepare("SELECT book_id, current_block_id, playback_speed, voice_id, updated_at FROM progress WHERE book_id = ?1").map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
     let mut rows = stmt.query([&id]).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
     if let Some(row) = rows.next().map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)? {
-        Ok(Json(ReadingProgress {
+        Ok(Json(Some(ReadingProgress {
             book_id: row.get(0).unwrap(),
             current_block_id: row.get(1).unwrap(),
             playback_speed: row.get(2).unwrap(),
             voice_id: row.get(3).unwrap_or(None),
             updated_at: row.get(4).unwrap(),
-        }))
+        })))
     } else {
-        Err(StatusCode::NOT_FOUND)
+        Ok(Json(None))
     }
 }
 
