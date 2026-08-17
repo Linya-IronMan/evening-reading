@@ -428,6 +428,80 @@ class TTSService {
       currentBlockId: this.currentBlockId,
     };
   }
+
+  // --- 试听测试相关功能 ---
+  private previewAudio: HTMLAudioElement | null = null;
+  private previewAbortController: AbortController | null = null;
+
+  /**
+   * 停止音色试听播放
+   */
+  public stopPreview(): void {
+    if (this.previewAbortController) {
+      this.previewAbortController.abort();
+      this.previewAbortController = null;
+    }
+    if (this.previewAudio) {
+      this.previewAudio.pause();
+      this.previewAudio = null;
+    }
+  }
+
+  /**
+   * 试听指定音色与文字内容（独立音频通道，不影响主阅读进度）
+   */
+  public async previewVoice(
+    voiceId: string,
+    text: string = '欢迎使用晚读，这是一段音色试听效果测试。',
+    callbacks?: {
+      onStart?: () => void;
+      onEnd?: () => void;
+      onError?: (err: string) => void;
+    }
+  ): Promise<void> {
+    this.stopPreview();
+
+    const controller = new AbortController();
+    this.previewAbortController = controller;
+    let objectUrl = '';
+
+    try {
+      const blob = await this.fetchEdgeTTSAudioBlob(text, voiceId, controller.signal);
+      if (controller.signal.aborted) return;
+
+      objectUrl = URL.createObjectURL(blob);
+      const audio = new Audio(objectUrl);
+      audio.playbackRate = this.rate;
+      this.previewAudio = audio;
+
+      audio.onplay = () => {
+        callbacks?.onStart?.();
+      };
+
+      audio.onended = () => {
+        URL.revokeObjectURL(objectUrl);
+        if (this.previewAudio === audio) {
+          this.previewAudio = null;
+        }
+        callbacks?.onEnd?.();
+      };
+
+      audio.onerror = () => {
+        URL.revokeObjectURL(objectUrl);
+        if (this.previewAudio === audio) {
+          this.previewAudio = null;
+        }
+        callbacks?.onError?.('试听语音播放失败');
+      };
+
+      await audio.play();
+    } catch (err: any) {
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+      if (err.name !== 'AbortError') {
+        callbacks?.onError?.(err.message || '试听生成失败');
+      }
+    }
+  }
 }
 
 export const ttsService = new TTSService();

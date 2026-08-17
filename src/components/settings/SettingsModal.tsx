@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Modal, Typography, Card, Tag, Button, Space, Tooltip, message } from 'antd';
+import { Modal, Typography, Card, Tag, Button, Space, Tooltip, Select, Input, message } from 'antd';
 import {
   GlobalOutlined,
   CopyOutlined,
@@ -9,10 +9,16 @@ import {
   ExportOutlined,
   SettingOutlined,
   CloudDownloadOutlined,
+  SoundOutlined,
+  AudioOutlined,
+  PauseOutlined,
+  CheckOutlined,
 } from '@ant-design/icons';
 import { invoke } from '@tauri-apps/api/core';
 import { openUrl } from '@tauri-apps/plugin-opener';
 import { API_BASE_URL } from '../../utils/apiClient';
+import { EDGE_VOICES } from '../../types/reader';
+import { ttsService } from '../../services/ttsService';
 import type { useUpdater } from '../../hooks/useUpdater';
 
 const { Title, Text, Paragraph } = Typography;
@@ -45,12 +51,67 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const [healthStatus, setHealthStatus] = useState<'checking' | 'healthy' | 'offline'>('checking');
   const [latency, setLatency] = useState<number | null>(null);
 
+  // 音色测试与试听状态
+  const [selectedVoiceId, setSelectedVoiceId] = useState<string>(ttsService.getVoice());
+  const [testText, setTestText] = useState<string>('欢迎使用晚读，这是一段音色试听效果测试。');
+  const [isPreviewing, setIsPreviewing] = useState<boolean>(false);
+  const [isPreviewLoading, setIsPreviewLoading] = useState<boolean>(false);
+
   // 动态拼装局域网访问地址
   const currentPort = window.location.port || (sysInfo.port ? String(sysInfo.port) : '1421');
   const displayIp = sysInfo.local_ip && sysInfo.local_ip !== '127.0.0.1' 
     ? sysInfo.local_ip 
     : (window.location.hostname !== 'localhost' ? window.location.hostname : '127.0.0.1');
   const webUrl = `http://${displayIp}:${currentPort}`;
+
+  // 弹窗关闭时自动停止试听
+  useEffect(() => {
+    if (!open) {
+      ttsService.stopPreview();
+      setIsPreviewing(false);
+      setIsPreviewLoading(false);
+    } else {
+      setSelectedVoiceId(ttsService.getVoice());
+    }
+  }, [open]);
+
+  // 触发/停止试听测试
+  const handleTogglePreview = async () => {
+    if (isPreviewing || isPreviewLoading) {
+      ttsService.stopPreview();
+      setIsPreviewing(false);
+      setIsPreviewLoading(false);
+      return;
+    }
+
+    setIsPreviewLoading(true);
+    await ttsService.previewVoice(
+      selectedVoiceId,
+      testText || '欢迎使用晚读，这是一段音色试听效果测试。',
+      {
+        onStart: () => {
+          setIsPreviewLoading(false);
+          setIsPreviewing(true);
+        },
+        onEnd: () => {
+          setIsPreviewing(false);
+          setIsPreviewLoading(false);
+        },
+        onError: (errMsg) => {
+          setIsPreviewLoading(false);
+          setIsPreviewing(false);
+          message.error(errMsg);
+        },
+      }
+    );
+  };
+
+  // 应用当前音色为默认朗读音色
+  const handleApplyVoice = () => {
+    ttsService.setVoice(selectedVoiceId);
+    const voiceObj = EDGE_VOICES.find((v) => v.id === selectedVoiceId);
+    message.success(`已设置默认朗读音色为: ${voiceObj?.name || selectedVoiceId}`);
+  };
 
   // 获取系统与网络信息
   const fetchSysInfo = useCallback(async () => {
@@ -222,7 +283,90 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           )}
         </Card>
 
-        {/* 2. Web 访问地址健康检查与快捷复制卡片 */}
+        {/* 2. 声音音色一键测试与设置卡片 */}
+        <Card
+          size="small"
+          style={{ marginBottom: 16 }}
+          title={
+            <Space>
+              <AudioOutlined style={{ color: '#d4af37' }} />
+              <span>声音音色一键测试与设置</span>
+            </Space>
+          }
+        >
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <div>
+              <Text type="secondary" style={{ fontSize: 13, display: 'block', marginBottom: 6 }}>
+                选择要测试的神经网络音色：
+              </Text>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <Select
+                  value={selectedVoiceId}
+                  onChange={(v) => {
+                    setSelectedVoiceId(v);
+                    if (isPreviewing) {
+                      ttsService.stopPreview();
+                      setIsPreviewing(false);
+                    }
+                  }}
+                  style={{ flex: 1 }}
+                  options={EDGE_VOICES.map((v) => ({
+                    value: v.id,
+                    label: (
+                      <span>
+                        {v.name}
+                        <Tag color={v.gender === 'female' ? 'magenta' : 'blue'} style={{ marginLeft: 8, fontSize: 11 }}>
+                          {v.gender === 'female' ? '女声' : '男声'}
+                        </Tag>
+                      </span>
+                    ),
+                  }))}
+                />
+                <Button
+                  size="middle"
+                  onClick={handleApplyVoice}
+                  icon={<CheckOutlined />}
+                  title="设置为当前全局朗读音色"
+                >
+                  设为默认
+                </Button>
+              </div>
+            </div>
+
+            <div>
+              <Text type="secondary" style={{ fontSize: 13, display: 'block', marginBottom: 6 }}>
+                试听测试文本：
+              </Text>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <Input
+                  value={testText}
+                  onChange={(e) => setTestText(e.target.value)}
+                  placeholder="请输入要试听测试的文本句段..."
+                  maxLength={100}
+                  style={{ flex: 1 }}
+                />
+                <Button
+                  type={isPreviewing ? 'default' : 'primary'}
+                  danger={isPreviewing}
+                  style={!isPreviewing ? { backgroundColor: '#d4af37', borderColor: '#d4af37' } : undefined}
+                  icon={
+                    isPreviewing ? (
+                      <PauseOutlined />
+                    ) : (
+                      <SoundOutlined spin={isPreviewLoading} />
+                    )
+                  }
+                  loading={isPreviewLoading}
+                  onClick={handleTogglePreview}
+                >
+                  {isPreviewLoading ? '生成中...' : isPreviewing ? '停止试听' : '一键试听'}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </Card>
+
+        {/* 3. Web 访问地址健康检查与快捷复制卡片 */}
         <Card
           size="small"
           title={
