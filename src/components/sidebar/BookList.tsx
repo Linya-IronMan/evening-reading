@@ -1,6 +1,6 @@
 import React from 'react';
-import { List, Button, Typography, Popconfirm, Tooltip, Space } from 'antd';
-import { BookOutlined, FileAddOutlined, DeleteOutlined, CheckCircleFilled } from '@ant-design/icons';
+import { List, Button, Typography, Popconfirm, Tooltip, Space, Badge } from 'antd';
+import { BookOutlined, FileAddOutlined, DeleteOutlined, CheckCircleFilled, CloudDownloadOutlined } from '@ant-design/icons';
 import { Book } from '../../types/reader';
 import { importTxtFile } from '../../services/importer';
 
@@ -13,6 +13,12 @@ interface BookListProps {
   onImportBook: (book: Book, blocks: any[]) => void;
   onDeleteBook: (bookId: string) => void;
   onJumpToChapter?: (blockId: string) => void;
+  /** 当前运行的应用版本号 */
+  appVersion?: string;
+  /** 是否有可用更新 */
+  hasUpdate?: boolean;
+  /** 打开更新弹窗回调 */
+  onOpenUpdater?: () => void;
 }
 
 /**
@@ -27,6 +33,9 @@ export const BookList: React.FC<BookListProps> = ({
   onImportBook,
   onDeleteBook,
   onJumpToChapter,
+  appVersion = '0.2.0',
+  hasUpdate = false,
+  onOpenUpdater,
 }) => {
   /**
    * 处理本地 TXT 文件选择导入
@@ -178,6 +187,40 @@ export const BookList: React.FC<BookListProps> = ({
             );
           }}
         />
+      </div>
+
+      {/* 底部版本与更新状态栏 */}
+      <div
+        style={{
+          marginTop: '0.8rem',
+          paddingTop: '0.8rem',
+          borderTop: '1px solid #2b3544',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+        }}
+      >
+        <Space size="small">
+          <Badge dot={hasUpdate} color="#d4af37">
+            <Text type="secondary" style={{ fontSize: '0.8rem', color: '#8c9ba8' }}>
+              晚读 v{appVersion}
+            </Text>
+          </Badge>
+        </Space>
+
+        <Button
+          type="text"
+          size="small"
+          icon={<CloudDownloadOutlined style={{ color: hasUpdate ? '#d4af37' : '#8c9ba8' }} />}
+          onClick={onOpenUpdater}
+          style={{
+            fontSize: '0.8rem',
+            color: hasUpdate ? '#d4af37' : '#8c9ba8',
+            padding: '0 4px',
+          }}
+        >
+          {hasUpdate ? '发现新版本' : '检查更新'}
+        </Button>
       </div>
     </div>
   );

@@ -23,9 +23,18 @@
       "csp": null
     }
   },
+  "plugins": {
+    "updater": {
+      "endpoints": [
+        "https://github.com/Linya-IronMan/evening-reading/releases/latest/download/latest.json"
+      ],
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEZEN0E3NUFCMUE1NDVGNzIKUldSeVgxUWFxM1Y2L1Ird0JSbGh4aVhTY3RGSGNxQlZHS3FZTjJ3MW8yem1UOHlBZ1JDVitGL0cK"
+    }
+  },
   "bundle": {
     "active": true,
     "targets": "all",
+    "createUpdaterArtifacts": true,
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",

@@ -20,6 +20,8 @@ import { BookList } from './components/sidebar/BookList';
 import { ReaderView } from './components/reader/ReaderView';
 import { AudioPlayer } from './components/reader/AudioPlayer';
 import { CommentSidebar } from './components/comments/CommentSidebar';
+import { UpdateModal } from './components/updater/UpdateModal';
+import { useUpdater } from './hooks/useUpdater';
 
 const { Sider, Content } = Layout;
 
@@ -38,6 +40,28 @@ export default function App(): React.ReactElement {
   const [scrollToBlockId, setScrollToBlockId] = useState<string | null>(null);
   const [playbackSpeed, setPlaybackSpeed] = useState<number>(1.0);
   const [voiceId, setVoiceId] = useState<string>(EDGE_VOICES[0].id);
+
+  // 软件更新状态机与弹窗控制
+  const updater = useUpdater({ isBusy: isPlaying || isAudioLoading });
+  const [isUpdateModalOpen, setIsUpdateModalOpen] = useState<boolean>(false);
+
+  /**
+   * 安全重启应用并持久化当前阅读进度
+   */
+  const handleRestartApp = async () => {
+    await updater.safeRestart(async () => {
+      ttsService.stop();
+      if (activeBookId && currentPlayingBlockId) {
+        await saveStoredProgress({
+          bookId: activeBookId,
+          currentBlockId: currentPlayingBlockId,
+          playbackSpeed,
+          voiceId,
+          updatedAt: Date.now(),
+        });
+      }
+    });
+  };
 
   // 1. 初始化数据加载
   useEffect(() => {
@@ -356,6 +380,14 @@ export default function App(): React.ReactElement {
             onImportBook={handleImportBook}
             onDeleteBook={handleDeleteBook}
             onJumpToChapter={handleScrollToBlock}
+            appVersion={updater.currentVersion}
+            hasUpdate={updater.status === 'available' || updater.status === 'ready'}
+            onOpenUpdater={() => {
+              setIsUpdateModalOpen(true);
+              if (updater.status === 'idle' || updater.status === 'up-to-date') {
+                updater.checkForUpdate(true);
+              }
+            }}
           />
         </Sider>
 
@@ -406,6 +438,21 @@ export default function App(): React.ReactElement {
           </Sider>
         )}
       </Layout>
+
+      {/* 原地热更新弹窗 */}
+      <UpdateModal
+        visible={isUpdateModalOpen}
+        status={updater.status}
+        currentVersion={updater.currentVersion}
+        metadata={updater.metadata}
+        progress={updater.progress}
+        error={updater.error}
+        isBusy={isPlaying || isAudioLoading}
+        onClose={() => setIsUpdateModalOpen(false)}
+        onCheckForUpdate={() => updater.checkForUpdate(true)}
+        onInstallUpdate={() => updater.installUpdate()}
+        onRestart={handleRestartApp}
+      />
     </ConfigProvider>
   );
 }
