@@ -10,6 +10,8 @@ pub struct Chapter {
     pub title: String,
     #[serde(rename = "blockId")]
     pub block_id: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub level: Option<u32>,
 }
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -20,6 +22,8 @@ pub struct Book {
     pub file_name: String,
     #[serde(rename = "totalBlocks")]
     pub total_blocks: u32,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub format: Option<String>,
     pub chapters: Option<Vec<Chapter>>,
     #[serde(rename = "createdAt")]
     pub created_at: i64,
@@ -102,13 +106,14 @@ pub async fn import_book(
         let chapters_json = payload.book.chapters.as_ref().map(|c| serde_json::to_string(c).unwrap_or_default());
         
         tx.execute(
-            "INSERT OR REPLACE INTO books (id, title, file_name, total_blocks, chapters, created_at, updated_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+            "INSERT OR REPLACE INTO books (id, title, file_name, total_blocks, chapters, format, created_at, updated_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
             (
                 &payload.book.id,
                 &payload.book.title,
                 &payload.book.file_name,
                 &payload.book.total_blocks,
                 chapters_json,
+                &payload.book.format,
                 &payload.book.created_at,
                 &payload.book.updated_at,
             ),
@@ -128,18 +133,20 @@ pub async fn import_book(
 
 pub async fn list_books(State(state): State<AppState>) -> Result<Json<Vec<Book>>, StatusCode> {
     let conn = state.db.lock().unwrap();
-    let mut stmt = conn.prepare("SELECT id, title, file_name, total_blocks, chapters, created_at, updated_at FROM books ORDER BY updated_at DESC").map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let mut stmt = conn.prepare("SELECT id, title, file_name, total_blocks, chapters, format, created_at, updated_at FROM books ORDER BY updated_at DESC").map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
     let books_iter = stmt.query_map([], |row| {
         let chapters_str: Option<String> = row.get(4)?;
         let chapters = chapters_str.and_then(|s| serde_json::from_str(&s).ok());
+        let format: Option<String> = row.get(5).unwrap_or(None);
         Ok(Book {
             id: row.get(0)?,
             title: row.get(1)?,
             file_name: row.get(2)?,
             total_blocks: row.get(3)?,
+            format,
             chapters,
-            created_at: row.get(5)?,
-            updated_at: row.get(6)?,
+            created_at: row.get(6)?,
+            updated_at: row.get(7)?,
         })
     }).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 

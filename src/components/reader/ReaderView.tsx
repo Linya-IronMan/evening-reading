@@ -1,6 +1,6 @@
 import React from 'react';
 import { Typography, Empty } from 'antd';
-import { Book, ParagraphBlock, Comment } from '../../types/reader';
+import { Book, BookFormat, ParagraphBlock, Comment } from '../../types/reader';
 import { ParagraphItem } from './ParagraphItem';
 import { Virtuoso, VirtuosoHandle } from 'react-virtuoso';
 
@@ -64,6 +64,8 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
     return new Set(currentBook?.chapters?.map((c) => c.blockId) || []);
   }, [currentBook]);
 
+  const bookFormat: BookFormat = currentBook?.format ?? 'txt';
+
   // 当用户手动滑动滚轮或触摸屏幕时，立刻关闭跟随模式，把控制权还给用户
   const handleUserScroll = () => {
     if (isFollowMode.current) {
@@ -124,14 +126,17 @@ export const ReaderView: React.FC<ReaderViewProps> = ({
           style={{ height: '100%' }}
           data={blocks}
           itemContent={(index, block) => {
-            const isChapterHeader = Boolean(
-              chapterBlockIds?.has(block.id) ||
-              (block.content.length < 50 && /^第\s*[一二三四五六七八九十百千万0-9]+\s*[章节回卷]/.test(block.content))
-            );
+            const isChapterHeader = bookFormat === 'markdown'
+              ? chapterBlockIds.has(block.id)
+              : Boolean(
+                  chapterBlockIds?.has(block.id) ||
+                  (block.content.length < 50 && /^第\s*[一二三四五六七八九十百千万0-9]+\s*[章节回卷]/.test(block.content))
+                );
             return (
               <div style={{ paddingLeft: '2rem', paddingRight: '0', paddingTop: index === 0 ? '1.5rem' : 0 }}>
                 <ParagraphItem
                   block={block}
+                  bookFormat={bookFormat}
                   isPlaying={block.id === currentPlayingBlockId}
                   isChapterHeader={isChapterHeader}
                   isFlashing={flashingTarget?.blockId === block.id}

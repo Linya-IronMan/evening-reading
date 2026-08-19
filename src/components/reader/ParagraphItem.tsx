@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Button, Input, Popover, Space, Typography, Tooltip } from 'antd';
 import { PlayCircleOutlined, SoundOutlined, EditOutlined, MessageOutlined, CheckOutlined, CloseOutlined, FormOutlined } from '@ant-design/icons';
-import { ParagraphBlock } from '../../types/reader';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import { BookFormat, ParagraphBlock } from '../../types/reader';
 import { ActiveOperatingState } from './ReaderView';
 
 const { TextArea } = Input;
@@ -9,6 +11,7 @@ const { Text } = Typography;
 
 interface ParagraphItemProps {
   block: ParagraphBlock;
+  bookFormat: BookFormat;
   isPlaying: boolean;
   isChapterHeader?: boolean;
   isFlashing?: boolean;
@@ -26,6 +29,7 @@ interface ParagraphItemProps {
  */
 export const ParagraphItem: React.FC<ParagraphItemProps> = ({
   block,
+  bookFormat,
   isPlaying,
   isChapterHeader = false,
   isFlashing = false,
@@ -37,6 +41,7 @@ export const ParagraphItem: React.FC<ParagraphItemProps> = ({
   onUpdateContent,
   onCreateComment,
 }) => {
+  const isMarkdown = bookFormat === 'markdown';
   const isEditing = activeOperating?.blockId === block.id && activeOperating?.mode === 'editing';
   const isSelected = activeOperating?.blockId === block.id && activeOperating?.mode === 'selected';
   const isOperatingOtherBlock = activeOperating !== null && activeOperating.blockId !== block.id;
@@ -299,6 +304,19 @@ export const ParagraphItem: React.FC<ParagraphItemProps> = ({
                 保存
               </Button>
             </div>
+          </div>
+        ) : isMarkdown ? (
+          <div className="md-block">
+            <ReactMarkdown
+              remarkPlugins={[remarkGfm]}
+              components={{
+                a: ({ node, ...props }) => (
+                  <a {...props} target="_blank" rel="noreferrer noopener" className="md-link" />
+                ),
+              }}
+            >
+              {block.content}
+            </ReactMarkdown>
           </div>
         ) : (
           <div className="reader-paragraph-text">

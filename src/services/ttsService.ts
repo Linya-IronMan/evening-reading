@@ -1,5 +1,6 @@
-import { EDGE_VOICES } from '../types/reader';
+import { BookFormat, EDGE_VOICES } from '../types/reader';
 import { fetchWithRetry } from '../utils/apiClient';
+import { stripMarkdownForTTS } from '../utils/markdownText';
 
 export interface TTSEventListeners {
   onLoadStart?: (blockId: string) => void;
@@ -11,7 +12,9 @@ export interface TTSEventListeners {
 
 interface PlaylistBlock {
   id: string;
-  text: string;
+  text: string;          // 原始内容（Markdown 场景为 MD 源码）
+  speakable: string;     // 送 TTS 的纯净文本（TXT 场景等于 text）
+  skipped: boolean;      // 是否为纯代码块/水平线等应跳过朗读的块
 }
 
 interface CacheEntry {
@@ -40,9 +43,30 @@ class TTSService {
   private playlist: PlaylistBlock[] = [];
   private cachePool = new Map<string, CacheEntry>();
   private playToken: number = 0;
+  private bookFormat: BookFormat = 'txt';
 
   public setListeners(listeners: TTSEventListeners): void {
     this.listeners = listeners;
+  }
+
+  /**
+   * 设置当前书籍格式。切换到 markdown 时会启用 TTS 清洗（去 # * ` 等标记）。
+   */
+  public setBookFormat(format: BookFormat): void {
+    if (this.bookFormat === format) return;
+    this.bookFormat = format;
+    // 刷新 playlist 里已计算的 speakable/skipped，并清空缓存以防旧音频复用
+    this.playlist = this.playlist.map((b) => this.buildPlaylistBlock(b.id, b.text));
+    this.cachePool.forEach((_, key) => this.evictCache(key));
+    this.cachePool.clear();
+  }
+
+  private buildPlaylistBlock(id: string, text: string): PlaylistBlock {
+    if (this.bookFormat === 'markdown') {
+      const { text: speakable, skipped } = stripMarkdownForTTS(text);
+      return { id, text, speakable, skipped };
+    }
+    return { id, text, speakable: text, skipped: false };
   }
 
   public setVoice(voiceId: string): void {
@@ -82,7 +106,7 @@ class TTSService {
    * 注入最新的播放列表
    */
   public setPlaylist(blocks: { id: string; content: string }[]): void {
-    this.playlist = blocks.map(b => ({ id: b.id, text: b.content }));
+    this.playlist = blocks.map((b) => this.buildPlaylistBlock(b.id, b.content));
   }
 
   /**
@@ -91,7 +115,7 @@ class TTSService {
   public updateBlock(blockId: string, newText: string): void {
     const idx = this.playlist.findIndex(b => b.id === blockId);
     if (idx !== -1) {
-      this.playlist[idx].text = newText;
+      this.playlist[idx] = this.buildPlaylistBlock(blockId, newText);
     }
     this.evictCache(blockId);
   }
@@ -139,11 +163,12 @@ class TTSService {
       this.evictCache(bId);
     }
 
-    // 2. 预取接下来 N 个段落
+    // 2. 预取接下来 N 个段落（跳过 skipped 段，如代码块）
     const targetCount = Math.min(this.playlist.length, currentIndex + 1 + PREFETCH_COUNT);
     for (let i = currentIndex + 1; i < targetCount; i++) {
       const block = this.playlist[i];
-      this.enqueuePrefetch(block.id, block.text);
+      if (block.skipped || !block.speakable) continue;
+      this.enqueuePrefetch(block.id, block.speakable);
     }
   }
 
@@ -295,20 +320,51 @@ class TTSService {
   public async speakBlock(blockId: string, text?: string): Promise<void> {
     this.stopInternal(false); // Stop current playback but KEEP caches
 
-    let contentToSpeak = text;
     const playlistIndex = this.playlist.findIndex(b => b.id === blockId);
-    
-    if (playlistIndex !== -1) {
-       contentToSpeak = this.playlist[playlistIndex].text;
-    } else if (!contentToSpeak) {
-       console.error("[TTS Frontend] No text provided and block not found in playlist");
-       return;
+    let entry: PlaylistBlock | undefined = playlistIndex !== -1 ? this.playlist[playlistIndex] : undefined;
+
+    // 若外部临时传入 text 且不在 playlist 中，即时构造一个临时条目
+    if (!entry && text) {
+      entry = this.buildPlaylistBlock(blockId, text);
+    } else if (!entry) {
+      console.error("[TTS Frontend] No text provided and block not found in playlist");
+      return;
+    }
+
+    // 若外部传入了新 text（例如刚保存的编辑），按新内容重建
+    if (text && entry.text !== text) {
+      entry = this.buildPlaylistBlock(blockId, text);
+      if (playlistIndex !== -1) this.playlist[playlistIndex] = entry;
     }
 
     this.currentBlockId = blockId;
     this.listeners.onLoadStart?.(blockId);
 
     const currentToken = ++this.playToken;
+
+    // Markdown 代码块等无需朗读的块：走跳过通道，仍触发 onStart→onEnd 保留 UI 高亮与自动前进
+    if (entry.skipped || !entry.speakable) {
+      this.listeners.onStart?.(blockId);
+      this.isPlaying = true;
+      this.isPaused = false;
+      const skipDelay = window.setTimeout(() => {
+        if (this.playToken !== currentToken) return;
+        this.isPlaying = false;
+        this.currentBlockId = null;
+        this.listeners.onEnd?.(blockId);
+        if (playlistIndex !== -1 && playlistIndex + 1 < this.playlist.length) {
+          const nextBlock = this.playlist[playlistIndex + 1];
+          this.listeners.onPlayNext?.(nextBlock.id);
+          this.speakBlock(nextBlock.id);
+        }
+      }, 350);
+      // 预取一下后续段
+      if (playlistIndex !== -1) this.prefetchNextBlocks(playlistIndex);
+      void skipDelay;
+      return;
+    }
+
+    const contentToSpeak = entry.speakable;
 
     if (playlistIndex !== -1) {
       this.prefetchNextBlocks(playlistIndex);

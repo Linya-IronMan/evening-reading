@@ -72,6 +72,8 @@ pub fn init_db(db_path: PathBuf) -> Result<AppState> {
 
     // 数据库增量平滑迁移（若已存在的旧数据库缺少 replies 列则自动补全）
     let _ = conn.execute("ALTER TABLE comments ADD COLUMN replies TEXT", []);
+    // Markdown 支持：为旧库补齐 books.format 列（NULL 视为 txt）
+    let _ = conn.execute("ALTER TABLE books ADD COLUMN format TEXT", []);
 
     let (tx, _rx) = tokio::sync::broadcast::channel(100);
 

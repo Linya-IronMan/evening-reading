@@ -2,9 +2,12 @@
  * 晚读 (Evening Reading) 领域模型定义
  */
 
+export type BookFormat = 'txt' | 'markdown';
+
 export interface Chapter {
   title: string;
   blockId: string;
+  level?: 1 | 2;          // Markdown 目录层级（H1/H2），缺省视为 1
 }
 
 // 1. 书籍元信息
@@ -13,6 +16,7 @@ export interface Book {
   title: string;          // 书名/文件名
   fileName: string;       // 原始文件名
   totalBlocks: number;    // 总段落块数量
+  format?: BookFormat;    // 内容格式，缺省视为 'txt' 兼容旧数据
   chapters?: Chapter[];   // 小说章节大纲
   createdAt: number;      // 创建/导入时间戳
   updatedAt: number;      // 最后阅读/修改时间戳

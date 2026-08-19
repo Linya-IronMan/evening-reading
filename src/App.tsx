@@ -108,6 +108,10 @@ export default function App(): React.ReactElement {
     setIsPaused(false);
     setCurrentPlayingBlockId(null);
 
+    // 提前同步当前书籍格式，供 TTS 清洗使用（Markdown 需去除 # ` * 等符号）
+    const activeBookForFormat = books.find((b) => b.id === activeBookId);
+    ttsService.setBookFormat(activeBookForFormat?.format ?? 'txt');
+
     let isCancelled = false;
     getStoredBlocks(activeBookId).then(b => {
       if (isCancelled) return;

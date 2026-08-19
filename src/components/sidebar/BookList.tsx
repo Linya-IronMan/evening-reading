@@ -2,7 +2,7 @@ import React from 'react';
 import { List, Button, Typography, Popconfirm, Tooltip, Space, Badge } from 'antd';
 import { BookOutlined, FileAddOutlined, DeleteOutlined, CheckCircleFilled, CloudDownloadOutlined, SettingOutlined } from '@ant-design/icons';
 import { Book } from '../../types/reader';
-import { importTxtFile } from '../../services/importer';
+import { importTxtFile, importMarkdownFile } from '../../services/importer';
 
 const { Text } = Typography;
 
@@ -41,14 +41,17 @@ export const BookList: React.FC<BookListProps> = ({
   onOpenSettings,
 }) => {
   /**
-   * 处理本地 TXT 文件选择导入
+   * 处理本地 TXT / Markdown 文件选择导入
    */
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     try {
-      const { book, blocks } = await importTxtFile(file);
+      const isMarkdown = /\.(md|markdown)$/i.test(file.name);
+      const { book, blocks } = isMarkdown
+        ? await importMarkdownFile(file)
+        : await importTxtFile(file);
       onImportBook(book, blocks);
     } catch (err) {
       console.error('Failed to import file:', err);
@@ -86,14 +89,14 @@ export const BookList: React.FC<BookListProps> = ({
               style={{ backgroundColor: '#d4af37', borderColor: '#d4af37' }}
               onClick={() => document.getElementById('txt-upload-input')?.click()}
             >
-              导入 TXT
+              导入书籍
             </Button>
           </label>
         </Space>
         <input
           id="txt-upload-input"
           type="file"
-          accept=".txt"
+          accept=".txt,.md,.markdown"
           style={{ display: 'none' }}
           onChange={handleFileChange}
         />
@@ -173,7 +176,8 @@ export const BookList: React.FC<BookListProps> = ({
                         key={index}
                         style={{
                           padding: '0.3rem 0.5rem',
-                          fontSize: '0.85rem',
+                          paddingLeft: `${0.5 + ((chapter.level ?? 1) - 1) * 1}rem`,
+                          fontSize: chapter.level === 2 ? '0.8rem' : '0.85rem',
                           color: '#8c9ba8',
                           cursor: 'pointer',
                           borderRadius: '4px',
