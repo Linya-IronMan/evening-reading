@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ConfigProvider, Layout, theme, message } from 'antd';
+import { ConfigProvider, Layout, theme, message, Button, Tooltip } from 'antd';
+import { MenuUnfoldOutlined, SettingOutlined } from '@ant-design/icons';
 import { Book, ParagraphBlock, Comment, ReadingProgress, EDGE_VOICES } from './types/reader';
 import { createDemoBook } from './services/importer';
 import {
@@ -49,6 +50,9 @@ export default function App(): React.ReactElement {
 
   // 设置弹窗控制与 ⌘ + , 快捷键注册
   const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
+
+  // 左侧书架侧栏折叠状态
+  const [isSiderCollapsed, setIsSiderCollapsed] = useState<boolean>(false);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -453,26 +457,60 @@ export default function App(): React.ReactElement {
         <Sider
           width={260}
           breakpoint="md"
-          collapsedWidth="0"
+          collapsedWidth={44}
+          collapsed={isSiderCollapsed}
+          onCollapse={setIsSiderCollapsed}
+          trigger={null}
           style={{ backgroundColor: '#0f141c', borderRight: '1px solid #2b3544' }}
         >
-          <BookList
-            books={books}
-            activeBookId={activeBookId}
-            onSelectBook={handleSelectBook}
-            onImportBook={handleImportBook}
-            onDeleteBook={handleDeleteBook}
-            onJumpToChapter={handleScrollToBlock}
-            appVersion={updater.currentVersion}
-            hasUpdate={updater.status === 'available' || updater.status === 'ready'}
-            onOpenUpdater={() => {
-              setIsUpdateModalOpen(true);
-              if (updater.status === 'idle' || updater.status === 'up-to-date') {
-                updater.checkForUpdate(true);
-              }
-            }}
-            onOpenSettings={() => setIsSettingsOpen(true)}
-          />
+          {isSiderCollapsed ? (
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                height: '100%',
+                padding: '1rem 0',
+              }}
+            >
+              <Tooltip title="展开书架" placement="right">
+                <Button
+                  type="text"
+                  size="small"
+                  icon={<MenuUnfoldOutlined style={{ color: '#d4af37', fontSize: '1.1rem' }} />}
+                  onClick={() => setIsSiderCollapsed(false)}
+                />
+              </Tooltip>
+              <Tooltip title="设置 (⌘,)" placement="right">
+                <Button
+                  type="text"
+                  size="small"
+                  icon={<SettingOutlined style={{ color: '#8c9ba8', fontSize: '1.05rem' }} />}
+                  onClick={() => setIsSettingsOpen(true)}
+                />
+              </Tooltip>
+            </div>
+          ) : (
+            <BookList
+              books={books}
+              activeBookId={activeBookId}
+              onSelectBook={handleSelectBook}
+              onImportBook={handleImportBook}
+              onDeleteBook={handleDeleteBook}
+              onJumpToChapter={handleScrollToBlock}
+              appVersion={updater.currentVersion}
+              hasUpdate={updater.status === 'available' || updater.status === 'ready'}
+              onOpenUpdater={() => {
+                setIsUpdateModalOpen(true);
+                if (updater.status === 'idle' || updater.status === 'up-to-date') {
+                  updater.checkForUpdate(true);
+                }
+              }}
+              onOpenSettings={() => setIsSettingsOpen(true)}
+              onCollapseSider={() => setIsSiderCollapsed(true)}
+            />
+          )}
         </Sider>
 
         <Content style={{ position: 'relative', backgroundColor: '#0f141c' }}>
