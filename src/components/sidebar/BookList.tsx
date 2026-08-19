@@ -1,6 +1,6 @@
 import React from 'react';
 import { List, Button, Typography, Popconfirm, Tooltip, Space, Badge } from 'antd';
-import { BookOutlined, FileAddOutlined, DeleteOutlined, CheckCircleFilled, CloudDownloadOutlined, SettingOutlined } from '@ant-design/icons';
+import { BookOutlined, FileAddOutlined, DeleteOutlined, CheckCircleFilled, CloudDownloadOutlined, SettingOutlined, MenuFoldOutlined } from '@ant-design/icons';
 import { Book } from '../../types/reader';
 import { importTxtFile } from '../../services/importer';
 
@@ -21,6 +21,8 @@ interface BookListProps {
   onOpenUpdater?: () => void;
   /** 打开设置面板回调 */
   onOpenSettings?: () => void;
+  /** 收起左侧书架侧栏 */
+  onCollapseSider?: () => void;
 }
 
 /**
@@ -39,6 +41,7 @@ export const BookList: React.FC<BookListProps> = ({
   hasUpdate = false,
   onOpenUpdater,
   onOpenSettings,
+  onCollapseSider,
 }) => {
   /**
    * 处理本地 TXT 文件选择导入
@@ -69,14 +72,16 @@ export const BookList: React.FC<BookListProps> = ({
         </Space>
 
         <Space size={8}>
-          <Tooltip title="设置 (⌘,)">
-            <Button
-              type="text"
-              size="small"
-              icon={<SettingOutlined style={{ color: '#8c9ba8', fontSize: '1rem' }} />}
-              onClick={onOpenSettings}
-            />
-          </Tooltip>
+          {onCollapseSider && (
+            <Tooltip title="收起书架">
+              <Button
+                type="text"
+                size="small"
+                icon={<MenuFoldOutlined style={{ color: '#8c9ba8', fontSize: '1rem' }} />}
+                onClick={onCollapseSider}
+              />
+            </Tooltip>
+          )}
 
           <label htmlFor="txt-upload-input">
             <Button

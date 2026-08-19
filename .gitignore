@@ -38,3 +38,7 @@ src-tauri/.tauri/
 .pnpm-store
 
 
+
+# Claude trace logs
+.claude-trace/
+
